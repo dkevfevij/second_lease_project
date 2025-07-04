@@ -1,14 +1,13 @@
 services:
   - type: web
-    name: second-lease-project-backend
+    name: second-lease-backend
     env: python
     runtime: python3.11
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
-    rootDir: backend  # 👈 ceci est la clé
+    startCommand: gunicorn -w 4 app:app
     envVars:
       - key: DATABASE_URL
         value: "postgresql://postgres:SecondLease2025@db.hqgurqbvesjqnthfzccc.supabase.co:5432/postgres"
       - key: JWT_SECRET_KEY
-        value: "second-lease-secret"
+        value: "TSBgIFkgciBnIG4gSyBQIDEgYyBwICQgeyBoIEggaiBtIDQgSiBYIEAgeCBLIG0gNiA> IDAgayB9IC4gcSA>"
     autoDeploy: true
