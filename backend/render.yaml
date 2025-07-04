@@ -5,6 +5,7 @@ services:
     runtime: python3.11
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
+    rootDir: backend  # 👈 ceci est la clé
     envVars:
       - key: DATABASE_URL
         value: "postgresql://postgres:SecondLease2025@db.hqgurqbvesjqnthfzccc.supabase.co:5432/postgres"
