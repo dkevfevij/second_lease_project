@@ -3,7 +3,7 @@ services:
     name: second-lease-backend
     env: python
     runtime: python3.11
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r backend/requirements.txt
     startCommand: gunicorn -w 4 app:app
     envVars:
       - key: DATABASE_URL
