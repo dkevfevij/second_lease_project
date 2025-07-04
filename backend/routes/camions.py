@@ -10,6 +10,7 @@ router = Blueprint('camions', __name__)
 @router.route('/camions', methods=['POST'])
 def enregistrer_camion():
     data = request.json
+    print("📦 Données reçues :", data)  # Debug console
 
     # Champs obligatoires
     champs_obligatoires = [
@@ -27,7 +28,7 @@ def enregistrer_camion():
     try:
         date_mec = datetime.strptime(data['date_mise_en_circulation'], '%Y-%m-%d')
     except ValueError:
-        return jsonify({'error': "Format de date invalide pour 'date_mise_en_circulation'. Format attendu : YYYY-MM-DD"}), 400
+        return jsonify({'error': "❌ Format invalide pour 'date_mise_en_circulation'. Format attendu : YYYY-MM-DD"}), 400
 
     # Vérifier que kilometrage est un entier positif
     try:
@@ -35,7 +36,11 @@ def enregistrer_camion():
         if kilometrage < 0:
             raise ValueError
     except ValueError:
-        return jsonify({'error': "'kilometrage' doit être un entier positif"}), 400
+        return jsonify({'error': "❌ 'kilometrage' doit être un entier positif"}), 400
+
+    # Vérifier format d’URL si fourni
+    if not data['photos_url'].startswith('http'):
+        return jsonify({'error': "❌ L'URL de la photo est invalide"}), 400
 
     try:
         db = SessionLocal()
@@ -43,7 +48,7 @@ def enregistrer_camion():
         # Vérifier unicité du numéro de châssis
         existant = db.query(Camion).filter(Camion.numero_chassis == data['numero_chassis']).first()
         if existant:
-            return jsonify({'error': 'Un camion avec ce numéro de châssis existe déjà.'}), 409
+            return jsonify({'error': "⚠️ Ce numéro de châssis est déjà enregistré."}), 409
 
         nouveau_camion = Camion(
             numero_chassis=data['numero_chassis'],
@@ -64,10 +69,11 @@ def enregistrer_camion():
         db.add(nouveau_camion)
         db.commit()
 
-        return jsonify({'message': 'Camion enregistré avec succès.'}), 201
+        return jsonify({'message': '✅ Camion enregistré avec succès.'}), 201
 
     except Exception as e:
-        return jsonify({'error': f'Erreur serveur : {str(e)}'}), 500
+        print("❌ Erreur serveur :", str(e))  # Console debug
+        return jsonify({'error': f"Erreur serveur : {str(e)}"}), 500
 
     finally:
         db.close()
