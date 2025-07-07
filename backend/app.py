@@ -8,8 +8,13 @@ app = Flask(__name__)
 CORS(app)
 
 # Importation des routes
+#route formulaire camion
 from routes.camions import router as camions_router
 app.register_blueprint(camions_router)
+
+# route login
+from routes.auth import auth_router
+app.register_blueprint(auth_router)
 
 # Test simple
 @app.route('/ping')
