@@ -21,7 +21,7 @@ export default function Login() {
     try {
       const data = await loginUser({
         username: nomUtilisateur,
-        mot_de_passe: motDePasse,
+        password: motDePasse,
       });
 
       console.log("✅ Utilisateur connecté :", data);
