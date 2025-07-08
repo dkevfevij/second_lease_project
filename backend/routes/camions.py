@@ -7,73 +7,31 @@ from datetime import datetime
 
 router = Blueprint('camions', __name__)
 
-@router.route('/camions', methods=['POST'])
-def enregistrer_camion():
-    data = request.json
-    print("📦 Données reçues :", data)  # Debug console
-
-    # Champs obligatoires
-    champs_obligatoires = [
-        'numero_chassis', 'immatriculation_etrangere', 'marque',
-        'modele', 'kilometrage', 'date_mise_en_circulation',
-        'inspection_reception', 'photos_url'
-    ]
-
-    # Vérification des champs requis
-    for champ in champs_obligatoires:
-        if champ not in data or not str(data[champ]).strip():
-            return jsonify({'error': f"Champ obligatoire manquant ou vide : '{champ}'"}), 400
-
-    # Vérifier le format de date
+@router.route('/camions', methods=['GET'])
+def get_camions():
+    db = SessionLocal()
     try:
-        date_mec = datetime.strptime(data['date_mise_en_circulation'], '%Y-%m-%d')
-    except ValueError:
-        return jsonify({'error': "❌ Format invalide pour 'date_mise_en_circulation'. Format attendu : YYYY-MM-DD"}), 400
-
-    # Vérifier que kilometrage est un entier positif
-    try:
-        kilometrage = int(data['kilometrage'])
-        if kilometrage < 0:
-            raise ValueError
-    except ValueError:
-        return jsonify({'error': "❌ 'kilometrage' doit être un entier positif"}), 400
-
-    # Vérifier format d’URL si fourni
-    if not data['photos_url'].startswith('http'):
-        return jsonify({'error': "❌ L'URL de la photo est invalide"}), 400
-
-    try:
-        db = SessionLocal()
-
-        # Vérifier unicité du numéro de châssis
-        existant = db.query(Camion).filter(Camion.numero_chassis == data['numero_chassis']).first()
-        if existant:
-            return jsonify({'error': "⚠️ Ce numéro de châssis est déjà enregistré."}), 409
-
-        nouveau_camion = Camion(
-            numero_chassis=data['numero_chassis'],
-            immatriculation_etrangere=data['immatriculation_etrangere'],
-            marque=data['marque'],
-            modele=data['modele'],
-            kilometrage=kilometrage,
-            date_mise_en_circulation=date_mec,
-            client=data.get('client'),
-            inspection_reception=data['inspection_reception'],
-            memos=data.get('memos'),
-            photos_url=data['photos_url'],
-            statut='en_attente',
-            fiche_complete=False,
-            a_des_alertes=False
-        )
-
-        db.add(nouveau_camion)
-        db.commit()
-
-        return jsonify({'message': '✅ Camion enregistré avec succès.'}), 201
-
+        camions = db.query(Camion).all()
+        resultat = []
+        for c in camions:
+            resultat.append({
+                "id": c.id,
+                "numero_chassis": c.numero_chassis,
+                "immatriculation_etrangere": c.immatriculation_etrangere,
+                "marque": c.marque,
+                "modele": c.modele,
+                "kilometrage": c.kilometrage,
+                "date_mise_en_circulation": c.date_mise_en_circulation.isoformat(),
+                "client": c.client,
+                "inspection_reception": c.inspection_reception,
+                "memos": c.memos,
+                "photos_url": c.photos_url,
+                "statut": c.statut,
+                "fiche_complete": c.fiche_complete,
+                "a_des_alertes": c.a_des_alertes
+            })
+        return jsonify(resultat), 200
     except Exception as e:
-        print("❌ Erreur serveur :", str(e))  # Console debug
-        return jsonify({'error': f"Erreur serveur : {str(e)}"}), 500
-
+        return jsonify({"error": str(e)}), 500
     finally:
         db.close()
