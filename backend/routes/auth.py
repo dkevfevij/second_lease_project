@@ -4,24 +4,33 @@ from flask import Blueprint, request, jsonify
 from models.database import SessionLocal
 from models.users import User
 import bcrypt
+import jwt
+import os
 
 auth_router = Blueprint("auth", __name__)
+SECRET_KEY = os.environ.get("SECRET_KEY", "SecondLeaseJWTSecret2025")
 
 @auth_router.route('/auth/login', methods=["POST"])
 def login():
-    data = request.json
-    identifiant = data.get("username")
-    mot_de_passe = data.get("mot_de_passe")
+    data = request.get_json()
+    username = data.get("username")
+    password = data.get("password")
 
-    if not identifiant or not mot_de_passe:
+    if not username or not password:
         return jsonify({"error": "Champs manquants"}), 400
 
     db = SessionLocal()
-    user = db.query(User).filter_by(identifiant=identifiant).first()
+    user = db.query(User).filter_by(identifiant=username).first()
 
-    if user and bcrypt.checkpw(mot_de_passe.encode('utf-8'), user.mot_de_passe.encode('utf-8')):
+    if user and bcrypt.checkpw(password.encode('utf-8'), user.mot_de_passe.encode('utf-8')):
+        token = jwt.encode({
+            "id": user.id,
+            "username": user.identifiant,
+            "role": user.role
+        }, SECRET_KEY, algorithm="HS256")
+
         return jsonify({
-            "message": "Connexion réussie",
+            "token": token,
             "user": {
                 "id": user.id,
                 "username": user.identifiant,

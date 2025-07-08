@@ -2,6 +2,8 @@
 
 from flask import Flask
 from flask_cors import CORS
+from dotenv import load_dotenv
+load_dotenv()
 
 # Initialisation de l'app
 app = Flask(__name__)
@@ -9,12 +11,17 @@ CORS(app)
 
 # Importation des routes
 #route formulaire camion
-from routes.camions import router as camions_router
-app.register_blueprint(camions_router)
+#from routes.camions import router as camions_router
+#app.register_blueprint(camions_router)
 
 # route login
 from routes.auth import auth_router
 app.register_blueprint(auth_router)
+
+# route dashboard
+from routes.dashboard import dashboard_bp
+app.register_blueprint(dashboard_bp)
+
 
 # Test simple
 @app.route('/ping')
