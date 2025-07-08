@@ -2,7 +2,7 @@ import { API_BASE_URL } from "../config";
 
 interface LoginData {
   username: string;
-  mot_de_passe: string;
+  password: string;
 }
 
 export const loginUser = async (loginData: LoginData) => {
