@@ -19,7 +19,8 @@ class Camion(Base):
     client = Column(String)  # facultatif
     inspection_reception = Column(Text, nullable=False)
     memos = Column(Text)  # facultatif
-    photos_url = Column(Text, nullable=False)
+    photos_url = Column(Text, nullable=True)
+
 
     # Suivi du statut et alertes
     statut = Column(String, default="en_attente")  # en_attente, en_cours, pret_a_livrer, livre

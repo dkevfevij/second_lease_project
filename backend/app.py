@@ -1,29 +1,27 @@
-# backend/app.py
-
 from flask import Flask
 from flask_cors import CORS
 from dotenv import load_dotenv
+from config.supabase_client import supabase  # 👈 importer ici
+
 load_dotenv()
 
-# Initialisation de l'app
 app = Flask(__name__)
 CORS(app)
 
-# Importation des routes
-#route formulaire camion
-#from routes.camions import router as camions_router
-#app.register_blueprint(camions_router)
-
-# route login
+# Routes
 from routes.auth import auth_router
 app.register_blueprint(auth_router)
 
-# route dashboard
 from routes.dashboard import dashboard_bp
 app.register_blueprint(dashboard_bp)
 
+from routes.upload_photo import upload_photo_bp, init_app
+init_app(supabase)  # 👈 on passe supabase ici
+app.register_blueprint(upload_photo_bp)
 
-# Test simple
+from routes.camions import camions_bp
+app.register_blueprint(camions_bp)
+
 @app.route('/ping')
 def ping():
     return {'message': 'pong'}, 200
