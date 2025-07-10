@@ -20,38 +20,37 @@ def upload_photo():
         if file.filename == '':
             return jsonify({"error": "No file selected"}), 400
 
-        camion_id_str = request.form.get('camion_id')
-        if not camion_id_str:
-            return jsonify({"error": "camion_id is required"}), 400
+        numero_chassis = request.form.get('numero_chassis')
+        if not numero_chassis:
+            return jsonify({"error": "numero_chassis is required"}), 400
 
-        try:
-            camion_id = int(camion_id_str)
-        except ValueError:
-            return jsonify({"error": "camion_id must be an integer"}), 400
+        # 🔍 Recherche du camion via numero_chassis
+        existing = supabase.table("camions").select("id, photos_url").eq("numero_chassis", numero_chassis).execute()
+        if not existing.data:
+            return jsonify({"error": "Camion not found"}), 404
 
-        file_name = f"{camion_id}_{file.filename}"
+        camion = existing.data[0]
+        camion_id = camion["id"]
+
+        file_name = f"{numero_chassis}_{file.filename}"
         bucket = "photos"
 
+        # 📤 Upload du fichier
         upload_response = supabase.storage.from_(bucket).upload(file_name, file.read(), {
             "content-type": file.content_type
         })
 
-        # 🔍 Vérifie si le camion existe
-        existing = supabase.table("camions").select("photos_url").eq("id", camion_id).execute()
-        if not existing.data:
-            return jsonify({"error": "Camion not found"}), 404
-
-        # 📋 On récupère la liste actuelle d'images
-        current_photos = existing.data[0].get("photos_url")
+        # 📋 Récupération des photos existantes
+        current_photos = camion.get("photos_url")
         try:
             photo_list = json.loads(current_photos) if current_photos else []
         except:
             photo_list = []
 
-        # ➕ Ajouter le nouveau nom de fichier
+        # ➕ Ajout du fichier
         photo_list.append(file_name)
 
-        # 📝 Mettre à jour
+        # 📝 Mise à jour dans la table
         update_response = supabase.table("camions").update({
             "photos_url": json.dumps(photo_list)
         }).eq("id", camion_id).execute()
