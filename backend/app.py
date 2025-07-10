@@ -6,7 +6,9 @@ from config.supabase_client import supabase  # 👈 importer ici
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+#CORS(app)
+CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*"}})
+
 
 # Routes
 from routes.auth import auth_router
