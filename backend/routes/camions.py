@@ -5,8 +5,6 @@ import jwt
 import os
 
 camions_bp = Blueprint("camions", __name__, url_prefix="/api/camions")
-
-# Secret pour le JWT
 SECRET_KEY = os.environ.get("SECRET_KEY", "SecondLeaseJWTSecret2025")
 
 # -----------------------------
@@ -52,7 +50,6 @@ def add_camion():
             "numero_chassis", "immatriculation_etrangere", "marque", "modele",
             "kilometrage", "date_mise_en_circulation", "inspection_reception"
         ]
-
         for field in required_fields:
             if not data.get(field):
                 return jsonify({"error": f"Le champ '{field}' est requis"}), 400
@@ -74,7 +71,6 @@ def add_camion():
         }
 
         response = supabase.table("camions").insert(camion_data).execute()
-
         if hasattr(response, "error") and response.error:
             return jsonify({"error": response.error.message}), 500
 
@@ -96,7 +92,6 @@ def modifier_camion(numero_chassis):
             return jsonify({"error": "Aucune donnée reçue"}), 400
 
         response = supabase.table("camions").update(data).eq("numero_chassis", numero_chassis).execute()
-
         if hasattr(response, "error") and response.error:
             return jsonify({"error": response.error.message}), 500
 
@@ -116,13 +111,24 @@ def modifier_camion(numero_chassis):
 def supprimer_camion(numero_chassis):
     try:
         response = supabase.table("camions").delete().eq("numero_chassis", numero_chassis).execute()
-
         if hasattr(response, "error") and response.error:
             return jsonify({"error": response.error.message}), 500
-
         if not response.data:
             return jsonify({"error": "Aucun camion trouvé"}), 404
-
         return jsonify({"message": "Camion supprimé"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# -----------------------------
+# Récupérer les infos d’un camion
+# -----------------------------
+@camions_bp.route("/<string:numero_chassis>", methods=["GET"])
+@token_required
+def get_camion_by_numero(numero_chassis):
+    try:
+        response = supabase.table("camions").select("*").eq("numero_chassis", numero_chassis).execute()
+        if not response.data:
+            return jsonify({"error": "Camion introuvable"}), 404
+        return jsonify(response.data[0]), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
