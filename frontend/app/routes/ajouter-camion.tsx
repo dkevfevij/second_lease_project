@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "../config";
 import Layout from "../../components/Layout";
+import toast, { Toaster } from "react-hot-toast";
 
 interface CamionData {
   numero_chassis: string;
@@ -28,6 +29,7 @@ export default function AjouterCamion() {
     memos: "",
   });
 
+  const [searchNumero, setSearchNumero] = useState<string>("");
   const [result, setResult] = useState<string>("");
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
@@ -44,27 +46,6 @@ export default function AjouterCamion() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const checkNumeroExist = async () => {
-    const numero = formData.numero_chassis.trim();
-    if (!numero) return;
-
-    try {
-      const res = await axios.get(`${API_BASE_URL}/api/camions/${numero}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (res.data && res.data.numero_chassis) {
-        alert("🚫 Ce numéro de châssis existe déjà !");
-        setFormData((prev) => ({ ...prev, numero_chassis: "" }));
-        setLocked(true);
-      } else {
-        setLocked(false);
-      }
-    } catch {
-      setLocked(false); // autoriser la suite si inexistant
-    }
-  };
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files;
     if (!selected) return;
@@ -72,14 +53,14 @@ export default function AjouterCamion() {
     const selectedFiles = Array.from(selected);
     const validFiles = selectedFiles.filter((file) => {
       if (file.size > MAX_FILE_SIZE) {
-        alert(`❌ ${file.name} dépasse 5MB`);
+        toast.error(`❌ ${file.name} dépasse 5MB`);
         return false;
       }
       return true;
     });
 
     if (files.length + validFiles.length > MAX_FILES) {
-      alert(`❌ Maximum ${MAX_FILES} fichiers`);
+      toast.error(`❌ Maximum ${MAX_FILES} fichiers`);
       return;
     }
 
@@ -98,64 +79,42 @@ export default function AjouterCamion() {
     setPreviews(newPreviews);
   };
 
-  useEffect(() => {
-    return () => {
-      previews.forEach((preview) => URL.revokeObjectURL(preview));
-    };
-  }, [previews]);
+  const checkNumeroExist = async () => {
+    const numero = formData.numero_chassis.trim();
+    if (!numero) return;
 
-  const uploadPhotos = async (numero_chassis: string) => {
-    if (!files.length) return;
-    const names: string[] = [];
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/camions/${numero}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    for (let file of files) {
-      const form = new FormData();
-      form.append("file", file);
-      form.append("numero_chassis", numero_chassis);
-
-      try {
-        const res = await axios.post(`${API_BASE_URL}/api/photos/upload`, form, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        names.push(res.data.file_name);
-      } catch (err) {
-        console.error("Erreur upload:", err);
+      if (res.data && res.data.numero_chassis) {
+        toast.error("🚫 Ce numéro de châssis existe déjà !");
+        setFormData((prev) => ({ ...prev, numero_chassis: "" }));
+        setLocked(true);
+      } else {
+        setLocked(false);
       }
+    } catch {
+      setLocked(false);
     }
-
-    setUploaded(names);
-  };
-
-  const validateForm = () => {
-    const required = [
-      "numero_chassis", "immatriculation_etrangere", "marque",
-      "modele", "kilometrage", "date_mise_en_circulation", "inspection_reception"
-    ];
-
-    for (let field of required) {
-      if (!formData[field as keyof CamionData]) {
-        setResult(`❌ Champ manquant : ${field.replace(/_/g, " ")}`);
-        return false;
-      }
-    }
-    return true;
   };
 
   const handleSearch = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/camions/${formData.numero_chassis}`, {
+      const res = await axios.get(`${API_BASE_URL}/api/camions/${searchNumero}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (res.data) {
         setFormData(res.data);
         setLocked(false);
-        setResult("✅ Camion trouvé");
+        toast.success("✅ Camion trouvé");
       } else {
-        setResult("❌ Camion introuvable");
+        toast.error("❌ Camion introuvable");
       }
     } catch {
-      setResult("❌ Erreur lors de la recherche");
+      toast.error("❌ Erreur lors de la recherche");
     }
   };
 
@@ -166,12 +125,12 @@ export default function AjouterCamion() {
         headers: { Authorization: `Bearer ${token}` },
       });
       await uploadPhotos(formData.numero_chassis);
-      setResult("✅ Camion ajouté");
+      toast.success("✅ Camion ajouté");
     } catch (err: any) {
       if (err.response?.data?.error?.includes("duplicate key")) {
-        setResult("❌ Numéro déjà existant");
+        toast.error("❌ Numéro déjà existant");
       } else {
-        setResult("❌ Erreur d'envoi");
+        toast.error("❌ Erreur d'envoi");
       }
     }
   };
@@ -183,9 +142,9 @@ export default function AjouterCamion() {
         headers: { Authorization: `Bearer ${token}` },
       });
       await uploadPhotos(formData.numero_chassis);
-      setResult("✏️ Camion mis à jour");
+      toast.success("✏️ Camion mis à jour");
     } catch {
-      setResult("❌ Erreur lors de la mise à jour");
+      toast.error("❌ Erreur lors de la mise à jour");
     }
   };
 
@@ -208,25 +167,62 @@ export default function AjouterCamion() {
       });
 
       setLocked(true);
-      setResult("🗑️ Camion supprimé");
+      toast.success("🗑️ Camion supprimé");
     } catch {
-      setResult("❌ Erreur lors de la suppression");
+      toast.error("❌ Erreur lors de la suppression");
     }
+  };
+
+  const validateForm = () => {
+    const required = [
+      "numero_chassis", "immatriculation_etrangere", "marque",
+      "modele", "kilometrage", "date_mise_en_circulation", "inspection_reception"
+    ];
+
+    for (let field of required) {
+      if (!formData[field as keyof CamionData]) {
+        toast.error(`❌ Champ manquant : ${field.replace(/_/g, " ")}`);
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const uploadPhotos = async (numero_chassis: string) => {
+    if (!files.length) return;
+    const names: string[] = [];
+
+    for (let file of files) {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("numero_chassis", numero_chassis);
+
+      try {
+        const res = await axios.post(`${API_BASE_URL}/api/photos/upload`, form, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        names.push(res.data.file_name);
+      } catch (err) {
+        toast.error("❌ Erreur upload photo");
+      }
+    }
+
+    setUploaded(names);
   };
 
   return (
     <Layout>
+      {typeof window !== "undefined" && <Toaster position="top-right" />}
       <div className="p-8 max-w-5xl mx-auto">
         <h2 className="text-3xl font-bold text-blue-800 mb-6 text-center">Ajouter / Modifier un camion</h2>
 
+        {/* Champ de recherche pour camion existant */}
         <div className="flex items-center mb-6 space-x-4">
           <input
             type="text"
-            placeholder="Entrer un N° de châssis"
-            value={formData.numero_chassis}
-            name="numero_chassis"
-            onBlur={checkNumeroExist}
-            onChange={handleChange}
+            placeholder="Rechercher un N° de châssis existant"
+            value={searchNumero}
+            onChange={(e) => setSearchNumero(e.target.value)}
             className="border px-3 py-2 rounded w-full"
           />
           <button
@@ -235,6 +231,20 @@ export default function AjouterCamion() {
           >
             Rechercher
           </button>
+        </div>
+
+        {/* Nouveau champ numéro de châssis pour ajout */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Nouveau N° de châssis</label>
+          <input
+            type="text"
+            placeholder="Ex: XLR123456789"
+            value={formData.numero_chassis}
+            name="numero_chassis"
+            onChange={handleChange}
+            onBlur={checkNumeroExist}
+            className="border px-3 py-2 rounded w-full"
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-4">

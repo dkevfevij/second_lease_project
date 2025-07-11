@@ -69,21 +69,24 @@ export default function Dashboard() {
                 >
                   Ajouter Camion
                 </button>
-                <button className="block w-full text-left px-3 py-2 rounded hover:bg-gray-100">
+                <button
+                  onClick={() => navigate("/AjouterMembre")}
+                  className="block w-full text-left px-3 py-2 rounded hover:bg-gray-100"
+                >
                   Ajouter Membre
                 </button>
               </>
             )}
-            <button className="block w-full text-left px-3 py-2 rounded hover:bg-gray-100">
+            <button
+                  onClick={() => navigate("/ListeUtilisateurs")}
+                  className="block w-full text-left px-3 py-2 rounded hover:bg-gray-100"
+                >
               Paramètres
             </button>
           </nav>
         </div>
         <button
-          onClick={() => {
-            localStorage.clear();
-            navigate("/login");
-          }}
+          onClick={() => navigate("/login")}
           className="text-sm text-red-600 hover:underline"
         >
           Se déconnecter
