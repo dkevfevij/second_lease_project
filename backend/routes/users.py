@@ -65,10 +65,32 @@ def ajouter_utilisateur():
             "prenom": prenom,
             "identifiant": identifiant,
             "mot_de_passe": hashed_pw,
-            "role": role
+            "role": role,
+            "actif": True
         }).execute()
 
         return jsonify({"message": "Utilisateur ajouté", "identifiant": identifiant}), 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# 🔁 Activer ou désactiver un compte
+@users_bp.route("/<int:user_id>/toggle", methods=["PATCH"])
+@token_required
+@admin_required
+def toggle_statut_utilisateur(user_id):
+    try:
+        user_data = supabase.table("users").select("actif").eq("id", user_id).single().execute()
+        if not user_data.data:
+            return jsonify({"error": "Utilisateur non trouvé"}), 404
+
+        current = user_data.data["actif"]
+        updated = supabase.table("users").update({"actif": not current}).eq("id", user_id).execute()
+
+        return jsonify({
+            "message": "Utilisateur mis à jour",
+            "nouveau_statut": "actif" if not current else "inactif"
+        }), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
