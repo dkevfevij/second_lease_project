@@ -24,9 +24,18 @@ export default function ListeUtilisateurs() {
   const [roleNew, setRoleNew] = useState("viewer");
   const [showPassword, setShowPassword] = useState(false);
 
-  const token = localStorage.getItem("token") || "";
-  const role = localStorage.getItem("role") || "";
-  const username = localStorage.getItem("username") || "Utilisateur";
+  const [token, setToken] = useState("");
+  const [role, setRole] = useState("");
+  const [username, setUsername] = useState("Utilisateur");
+
+  // 🧠 Protéger l'accès à localStorage côté navigateur uniquement
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setToken(localStorage.getItem("token") || "");
+      setRole(localStorage.getItem("role") || "");
+      setUsername(localStorage.getItem("username") || "Utilisateur");
+    }
+  }, []);
 
   useEffect(() => {
     if (nom && prenom) {
@@ -85,8 +94,8 @@ export default function ListeUtilisateurs() {
   };
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    if (token) fetchUsers();
+  }, [token]);
 
   const filtered = users.filter((u) =>
     (u.nom + u.prenom + u.role).toLowerCase().includes(search.toLowerCase())
@@ -97,7 +106,7 @@ export default function ListeUtilisateurs() {
       <Toaster position="top-right" />
 
       {/* Sidebar */}
-      <aside className="w-64 bg-[#879cae] text-white p-6 space-y-4">
+      <aside className="w-64 bg-[#d0d9e1] text-black p-6 space-y-4">
         <img src="/logo.svg" alt="Logo" className="w-32 mx-auto mb-6" />
         <h2 className="text-xl font-bold text-center">Bonne Route Auto</h2>
         <nav className="mt-8 space-y-3 text-sm">
