@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String
 from .database import Base
-
+from sqlalchemy import Boolean
 class User(Base):
     __tablename__ = "users"
 
@@ -10,3 +10,4 @@ class User(Base):
     identifiant = Column(String, unique=True, nullable=False)
     mot_de_passe = Column(String, nullable=False)  # mot de passe hashé
     role = Column(String, default="viewer")  # admin ou viewer
+    actif = Column(Boolean, default=True)

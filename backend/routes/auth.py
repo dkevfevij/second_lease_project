@@ -23,6 +23,10 @@ def login():
     user = db.query(User).filter_by(identifiant=username).first()
 
     if user and bcrypt.checkpw(password.encode('utf-8'), user.mot_de_passe.encode('utf-8')):
+        # 🔒 Vérifie si le compte est actif
+        if not user.actif:
+            return jsonify({"error": "Compte inactif. Contactez un administrateur."}), 403
+
         token = jwt.encode({
             "id": user.id,
             "username": user.identifiant,
