@@ -24,6 +24,9 @@ app.register_blueprint(upload_photo_bp)
 from routes.camions import camions_bp
 app.register_blueprint(camions_bp)
 
+from routes.users import users_bp
+app.register_blueprint(users_bp)
+
 @app.route('/ping')
 def ping():
     return {'message': 'pong'}, 200
