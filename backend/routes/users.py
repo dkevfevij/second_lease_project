@@ -73,6 +73,15 @@ def ajouter_utilisateur():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+# reccuperer users
+@users_bp.route("", methods=["GET"])
+@token_required
+def get_users():
+    try:
+        result = supabase.table("users").select("id, nom, prenom, role, actif").execute()
+        return jsonify(result.data), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # 🔁 Activer ou désactiver un compte
 @users_bp.route("/<int:user_id>/toggle", methods=["PATCH"])
