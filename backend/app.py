@@ -27,6 +27,17 @@ app.register_blueprint(camions_bp)
 from routes.users import users_bp
 app.register_blueprint(users_bp)
 
+from routes.fiche_routes import fiche_bp
+app.register_blueprint(fiche_bp)
+
+from routes.importation import importation_bp
+app.register_blueprint(importation_bp)
+
+from scrape_erp.login import login_bp
+app.register_blueprint(login_bp, url_prefix="/api")
+
+
+
 @app.route('/ping')
 def ping():
     return {'message': 'pong'}, 200

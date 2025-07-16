@@ -12,3 +12,4 @@ class Piece(Base):
     designation = Column(String)
     quantite = Column(Integer)
     est_livree = Column(Boolean, default=False)
+    fiche_reference = Column(String, nullable=True)
