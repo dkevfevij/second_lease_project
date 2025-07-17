@@ -1,135 +1,93 @@
 from flask import Blueprint, request, jsonify
-from werkzeug.utils import secure_filename
-from datetime import datetime
-import os
-from dotenv import load_dotenv
-load_dotenv()
+from config.supabase_client import supabase
+from middlewares.auth_guard import token_required, role_required
 
-from models.database import SessionLocal
-from models.camion import Camion
-from models.bl_documents import BLDocument
-from models.pieces import Piece
-from models.prestations import Prestation
-from utils.chatpdf import upload_pdf_to_chatpdf, ask_chatpdf_for_extraction
+fiche_routes_bp = Blueprint("fiche_routes", __name__, url_prefix="/api")
 
-fiche_bp = Blueprint("fiche", __name__, url_prefix="/api/fiche")
-UPLOAD_FOLDER = "static/bl_files"
-
-# 🔼 Upload d'une fiche + traitement ChatPDF + insertion base
-@fiche_bp.route("/upload", methods=["POST"])
-def upload_fiche_pdf():
+# ✅ Récupérer prestations + pièces liées à un camion
+@fiche_routes_bp.route("/camions/<string:chassis>/elements_fiche", methods=["GET"])
+@token_required
+def get_elements_fiche(chassis):
     try:
-        file = request.files.get("file")
-        numero_chassis = request.form.get("numero_chassis")
+        camion_res = supabase.table("camions").select("id").eq("numero_chassis", chassis).execute()
+        if not camion_res.data:
+            return jsonify({"error": "Camion introuvable"}), 404
 
-        if not file or not numero_chassis:
-            return jsonify({"error": "Fichier ou numéro de châssis manquant"}), 400
+        camion_id = camion_res.data[0]["id"]
 
-        db = SessionLocal()
-        camion = db.query(Camion).filter_by(numero_chassis=numero_chassis).first()
-        if not camion:
-            return jsonify({"error": "Camion non trouvé"}), 404
+        prestations = supabase.table("prestations").select(" reference, description, est_validee, fiche_reference").eq("camion_id", camion_id).execute().data
+        pieces = supabase.table("pieces").select(" reference, designation, est_livree, fiche_reference").eq("camion_id", camion_id).execute().data
 
-        camion_id = camion.id
-
-        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(UPLOAD_FOLDER, filename)
-        file.save(filepath)
-
-        # 📄 Sauvegarde fichier dans bl_documents
-        bl_doc = BLDocument(
-            camion_id=camion_id,
-            fichier_url=filepath,
-            date_upload=datetime.utcnow()
-        )
-        db.add(bl_doc)
-
-        # 🔁 Traitement IA via ChatPDF
-        source_id = upload_pdf_to_chatpdf(filepath)
-        json_data = ask_chatpdf_for_extraction(source_id)
-
-        import json
-        elements = json.loads(json_data)
-
-        articles = []
-        produits = []
-
-        for item in elements:
-            if item["type"] == "article":
-                db.add(Prestation(
-                    camion_id=camion_id,
-                    reference=item["reference"],
-                    description=item["description"],
-                    est_validee=False
-                ))
-                articles.append(item)
-
-            elif item["type"] == "produit":
-                db.add(Piece(
-                    camion_id=camion_id,
-                    reference=item["reference"],
-                    designation=item["description"],
-                    quantite=int(float(item["quantite"])),
-                    est_livree=False
-                ))
-                produits.append(item)
-
-        db.commit()
-
-        return jsonify({
-            "message": "Fiche analysée avec succès via ChatPDF",
-            "camion": numero_chassis,
-            "fichier": filename,
-            "articles": articles,
-            "produits": produits,
-            "total_elements": len(elements)
-        }), 200
+        return jsonify({"prestations": prestations, "pieces": pieces}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-# 🔽 Récupérer les articles/pièces extraits
-@fiche_bp.route("/checklist/<string:numero_chassis>", methods=["GET"])
-def get_checklist(numero_chassis):
+# ✅ Mettre à jour une prestation (admin uniquement)
+@fiche_routes_bp.route("/prestations/<int:prestation_id>", methods=["PATCH"])
+@token_required
+@role_required("admin")
+def update_prestation(prestation_id):
     try:
-        db = SessionLocal()
-        camion = db.query(Camion).filter_by(numero_chassis=numero_chassis).first()
+        payload = request.get_json()
+        est_validee = payload.get("est_validee")
 
-        if not camion:
-            return jsonify({"error": "Camion non trouvé"}), 404
+        # Vérification existence
+        check = supabase.table("prestations").select("id").eq("id", prestation_id).execute()
+        if not check.data:
+            return jsonify({"error": "Prestation introuvable"}), 404
 
-        prestations = db.query(Prestation).filter_by(camion_id=camion.id).all()
-        prestations_data = [
-            {
-                "id": p.id,
-                "reference": p.reference,
-                "description": p.description,
-                "est_validee": p.est_validee
-            }
-            for p in prestations
-        ]
+        supabase.table("prestations").update({"est_validee": est_validee}).eq("id", prestation_id).execute()
 
-        pieces = db.query(Piece).filter_by(camion_id=camion.id).all()
-        pieces_data = [
-            {
-                "id": p.id,
-                "reference": p.reference,
-                "designation": p.designation,
-                "quantite": p.quantite,
-                "est_livree": p.est_livree
-            }
-            for p in pieces
-        ]
-
-        return jsonify({
-            "numero_chassis": numero_chassis,
-            "prestations": prestations_data,
-            "pieces": pieces_data
-        }), 200
+        return jsonify({"message": "Prestation mise à jour", "id": prestation_id, "est_validee": est_validee}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
-    
+
+
+# ✅ Mettre à jour une pièce (admin uniquement)
+@fiche_routes_bp.route("/pieces/<int:piece_id>", methods=["PATCH"])
+@token_required
+@role_required("admin")
+def update_piece(piece_id):
+    try:
+        payload = request.get_json()
+        est_livree = payload.get("est_livree")
+
+        # Vérification existence
+        check = supabase.table("pieces").select("id").eq("id", piece_id).execute()
+        if not check.data:
+            return jsonify({"error": "Pièce introuvable"}), 404
+
+        supabase.table("pieces").update({"est_livree": est_livree}).eq("id", piece_id).execute()
+
+        return jsonify({"message": "Pièce mise à jour", "id": piece_id, "est_livree": est_livree}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ✅ Changer le statut d'un camion (admin uniquement)
+@fiche_routes_bp.route("/camions/<string:chassis>/changer-statut", methods=["PATCH"])
+@token_required
+@role_required("admin")
+def changer_statut_camion(chassis):
+    try:
+        payload = request.get_json()
+        nouveau_statut = payload.get("nouveau_statut")
+        statuts_valides = ["en_attente", "en_cours", "pret_a_livrer", "livre"]
+
+        if nouveau_statut not in statuts_valides:
+            return jsonify({"error": f"Statut invalide. Choisissez parmi : {statuts_valides}"}), 400
+
+        check = supabase.table("camions").select("id").eq("numero_chassis", chassis).execute()
+        if not check.data:
+            return jsonify({"error": "Camion introuvable"}), 404
+
+        supabase.table("camions").update({"statut": nouveau_statut}).eq("numero_chassis", chassis).execute()
+
+        return jsonify({"message": "Statut mis à jour", "numero_chassis": chassis, "nouveau_statut": nouveau_statut}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

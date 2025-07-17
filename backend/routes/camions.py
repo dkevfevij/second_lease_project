@@ -126,9 +126,13 @@ def supprimer_camion(numero_chassis):
 @token_required
 def get_camion_by_numero(numero_chassis):
     try:
-        response = supabase.table("camions").select("*").eq("numero_chassis", numero_chassis).execute()
+        response = supabase.table("camions").select(
+            "numero_chassis, immatriculation_etrangere, marque, modele, kilometrage, date_mise_en_circulation, client, inspection_reception"
+        ).eq("numero_chassis", numero_chassis).execute()
+
         if not response.data:
             return jsonify({"error": "Camion introuvable"}), 404
+
         return jsonify(response.data[0]), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
