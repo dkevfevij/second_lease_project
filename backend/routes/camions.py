@@ -127,7 +127,7 @@ def supprimer_camion(numero_chassis):
 def get_camion_by_numero(numero_chassis):
     try:
         response = supabase.table("camions").select(
-            "numero_chassis, immatriculation_etrangere, marque, modele, kilometrage, date_mise_en_circulation, client, inspection_reception"
+            "numero_chassis, immatriculation_etrangere, marque, modele, kilometrage, date_mise_en_circulation, client, inspection_reception, statut"
         ).eq("numero_chassis", numero_chassis).execute()
 
         if not response.data:
