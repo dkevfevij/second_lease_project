@@ -15,8 +15,8 @@ def get_elements_fiche(chassis):
 
         camion_id = camion_res.data[0]["id"]
 
-        prestations = supabase.table("prestations").select(" reference, description, est_validee, fiche_reference").eq("camion_id", camion_id).execute().data
-        pieces = supabase.table("pieces").select(" reference, designation, est_livree, fiche_reference").eq("camion_id", camion_id).execute().data
+        prestations = supabase.table("prestations").select("id, reference, description, est_validee, fiche_reference").eq("camion_id", camion_id).execute().data
+        pieces = supabase.table("pieces").select("id, reference, designation, est_livree, fiche_reference").eq("camion_id", camion_id).execute().data
 
         return jsonify({"prestations": prestations, "pieces": pieces}), 200
 
