@@ -41,17 +41,17 @@ export default function Login() {
         {/* Section gauche */}
         <div className="w-1/2 bg-gray-50 px-10 py-12 flex flex-col justify-center items-center text-center relative">
           <img src="/logo.svg" alt="Bonne Route Logo" className="w-48 mb-6" />
-          <h2 className="text-4xl font-bold text-blue-800">BONNE ROUTE <span className="text-red-600">AUTO</span></h2>
+          <h2 className="text-4xl font-bold text-blue-900">BONNE ROUTE <span className="text-blue-900">AUTO</span></h2>
           <p className="mt-4 text-md text-gray-700 font-medium">Bienvenue sur Bonne Route</p>
           <p className="mt-1 text-sm text-gray-600 px-6">
-            Application de gestion à destination exclusive du réseau Bonne Route.
+            Application de suivi des camions Second Lease.
           </p>
-          <p className="mt-16 text-xs text-gray-500">Copyright 2025 © Foliatech, Tous les droits sont réservés.</p>
+          <p className="mt-16 text-xs text-gray-500">Copyright 2025 © , Tous les droits sont réservés.</p>
         </div>
 
         {/* Section droite */}
         <div className="w-1/2 px-10 py-12 flex flex-col justify-center items-center bg-white">
-          <h3 className="text-2xl font-semibold text-blue-900 text-center mb-8">APPLICATION DE GESTION</h3>
+          <h3 className="text-2xl font-semibold text-blue-900 text-center mb-8">APPLICATION DE SUIVI</h3>
 
           <form className="space-y-6 w-full max-w-sm" onSubmit={handleLogin}>
             <div>
@@ -61,7 +61,7 @@ export default function Login() {
                 required
                 value={nomUtilisateur}
                 onChange={(e) => setNomUtilisateur(e.target.value)}
-                placeholder="ex: N.HILALI"
+                placeholder="ex: n.hilali"
                 className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -92,11 +92,11 @@ export default function Login() {
 
             <button
               type="submit"
-               onClick={handleLogin} // ← IMPORTANT
-              className="w-full bg-blue-700 hover:bg-blue-800 text-white font-medium py-2 rounded shadow"
+              className="w-full bg-[#1a5c97] hover:bg-[#14497a] text-white px-4 py-2 rounded shadow disabled:opacity-50"
             >
               Se connecter
             </button>
+            {erreur && <span className="text-sm text-gray-600">{erreur}</span>}
           </form>
         </div>
       </div>

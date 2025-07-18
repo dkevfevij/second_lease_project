@@ -3,6 +3,7 @@ import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 import { Eye, EyeOff } from "lucide-react";
 import { API_BASE_URL } from "../config";
+import { useNavigate } from "react-router-dom";
 
 interface User {
   id: number;
@@ -16,19 +17,17 @@ export default function ListeUtilisateurs() {
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
-
   const [nom, setNom] = useState("");
   const [prenom, setPrenom] = useState("");
   const [identifiant, setIdentifiant] = useState("");
   const [motDePasse, setMotDePasse] = useState("");
   const [roleNew, setRoleNew] = useState("viewer");
   const [showPassword, setShowPassword] = useState(false);
-
   const [token, setToken] = useState("");
   const [role, setRole] = useState("");
   const [username, setUsername] = useState("Utilisateur");
+  const navigate = useNavigate();
 
-  // 🧠 Protéger l'accès à localStorage côté navigateur uniquement
   useEffect(() => {
     if (typeof window !== "undefined") {
       setToken(localStorage.getItem("token") || "");
@@ -58,9 +57,11 @@ export default function ListeUtilisateurs() {
 
   const toggleActif = async (id: number) => {
     try {
-      await axios.patch(`${API_BASE_URL}/api/users/${id}/toggle`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.patch(
+        `${API_BASE_URL}/api/users/${id}/toggle`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       toast.success("✅ Statut mis à jour");
       fetchUsers();
     } catch {
@@ -76,17 +77,22 @@ export default function ListeUtilisateurs() {
     }
 
     try {
-      await axios.post(`${API_BASE_URL}/api/users`, {
-        nom,
-        prenom,
-        mot_de_passe: motDePasse,
-        role: roleNew,
-      }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.post(
+        `${API_BASE_URL}/api/users`,
+        {
+          nom,
+          prenom,
+          mot_de_passe: motDePasse,
+          role: roleNew,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       toast.success("✅ Membre ajouté !");
       setShowModal(false);
-      setNom(""); setPrenom(""); setMotDePasse(""); setIdentifiant("");
+      setNom("");
+      setPrenom("");
+      setMotDePasse("");
+      setIdentifiant("");
       fetchUsers();
     } catch (err: any) {
       toast.error(err.response?.data?.error || "❌ Erreur lors de l'ajout");
@@ -102,40 +108,44 @@ export default function ListeUtilisateurs() {
   );
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
-      <Toaster position="top-right" />
-
-      {/* Sidebar */}
-      <aside className="w-64 bg-[#d0d9e1] text-black p-6 space-y-4">
-        <img src="/logo.svg" alt="Logo" className="w-32 mx-auto mb-6" />
-        <h2 className="text-xl font-bold text-center">Bonne Route Auto</h2>
-        <nav className="mt-8 space-y-3 text-sm">
-          <a href="/dashboard" className="block hover:underline">Dashboard</a>
-          <a href="/ListeUtilisateurs" className="block underline">Utilisateurs</a>
-        </nav>
+    <div className="flex min-h-screen">
+      <aside className="w-64 bg-white shadow-lg p-4 flex flex-col justify-between">
+        <div>
+          <img src="/logo.svg" alt="Bonne Route Auto" className="h-20 mb-6" />
+          <nav className="space-y-3 text-base">
+            {[
+              { icon: "🏠", label: "Dashboard", path: "/dashboard" },
+              { icon: "🚛", label: "Ajouter Camions", path: "/ajouter-camion" },
+              { icon: "👤", label: "Utilisateurs", path: "/ListeUtilisateurs" },
+              { icon: "⚙️", label: "Paramètres", path: "" },
+            ].map((item) => (
+              <button
+                key={item.label}
+                onClick={() => navigate(item.path)}
+                className={`block w-full text-left px-3 py-2 hover:bg-gray-100 ${
+                  location.pathname === item.path ? "bg-blue-50 text-blue-600 font-semibold" : ""
+                }`}
+              >
+                <span className="mr-3">{item.icon}</span> {item.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+        <button
+          onClick={() => {
+            localStorage.clear();
+            navigate("/login");
+          }}
+          className="text-base text-red-600 hover:underline flex items-center gap-2"
+        >
+          <span>🔓</span> Se déconnecter
+        </button>
       </aside>
 
-      {/* Main */}
-      <main className="flex-1">
-        {/* Header */}
-        <header className="bg-white shadow px-6 py-4 flex justify-between items-center border-b">
-          <span className="font-medium text-sm text-gray-700">
-            Connecté : {username} ({role})
-          </span>
-          <button
-            onClick={() => {
-              localStorage.clear();
-              window.location.href = "/login";
-            }}
-            className="text-sm text-red-600 hover:underline"
-          >
-            Se déconnecter
-          </button>
-        </header>
-
-        {/* Contenu */}
-        <div className="p-6">
-          <div className="bg-white rounded shadow-md">
+      <main className="flex-1 p-8 bg-gray-50">
+        <Toaster position="top-right" />
+        <div className="max-w-5xl mx-auto">
+          <div className="bg-white rounded-lg shadow-md">
             <div className="flex items-center justify-between px-6 py-4 border-b" style={{ backgroundColor: "#1a5c97" }}>
               <h2 className="text-lg font-bold text-white">Liste des utilisateurs</h2>
               {role === "admin" && (
@@ -193,10 +203,9 @@ export default function ListeUtilisateurs() {
             </div>
           </div>
 
-          {/* MODALE AJOUT MEMBRE */}
           {showModal && (
-            <div className="fixed inset-0 bg-white/70 backdrop-blur-sm flex justify-center items-center z-50">
-              <div className="bg-white w-[550px] rounded shadow-lg p-8 relative border border-blue-200">
+            <div className="fixed inset-0 bg-white text-[#1a5c97] bg-opacity-50 flex justify-center items-center z-50">
+              <div className="bg-white w-[550px] rounded-lg shadow-lg p-8 relative border border-blue-200">
                 <h3 className="text-xl font-semibold text-[#1a5c97] mb-6 text-center">Ajouter un membre</h3>
                 <form className="space-y-4" onSubmit={ajouterMembre}>
                   <div className="grid grid-cols-2 gap-4">
@@ -269,7 +278,7 @@ export default function ListeUtilisateurs() {
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-[#1a5c97] hover:bg-blue-800 text-white rounded shadow"
+                      className="px-4 py-2 bg-[#1a5c97] hover:bg-[#14497a] text-white rounded shadow"
                     >
                       Ajouter
                     </button>
