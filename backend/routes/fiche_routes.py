@@ -16,9 +16,17 @@ def get_elements_fiche(chassis):
         camion_id = camion_res.data[0]["id"]
 
         prestations = supabase.table("prestations").select("id, reference, description, est_validee, fiche_reference").eq("camion_id", camion_id).execute().data
-        pieces = supabase.table("pieces").select("id, reference, designation, est_livree, fiche_reference").eq("camion_id", camion_id).execute().data
+        pieces = supabase.table("pieces").select("id, reference, designation, quantite, est_livree, fiche_reference").eq("camion_id", camion_id).execute().data
 
-        return jsonify({"prestations": prestations, "pieces": pieces}), 200
+         # 🔄 Extraire toutes les références de fiche uniques (depuis prestations ou pieces)
+        fiches = list(set([p["fiche_reference"] for p in prestations + pieces if p.get("fiche_reference")]))
+
+        return jsonify({
+            "prestations": prestations,
+            "pieces": pieces,
+            "fiches": fiches  # 🆕 on envoie aussi les références
+        }), 200
+
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
