@@ -79,7 +79,7 @@ def add_camion():
         if hasattr(response, "error") and response.error:
             return jsonify({"error": response.error.message}), 500
 
-        return jsonify({"message": "Camion ajouté avec succès"}), 201
+        return jsonify({"message": "Camion ajouté avec succès", "id": response.data[0]["id"] if response.data else None}), 201
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -104,6 +104,9 @@ def modifier_camion(numero_chassis):
             return jsonify({"error": "Aucun camion trouvé"}), 404
         camion_id = current_camion.data[0]["id"]  # Assuming 'id' is the primary key
 
+        # Log the incoming data for debugging
+        print(f"Received data: {data}")
+
         # Check for duplicate numero_chassis (excluding the current camion)
         new_numero_chassis = data.get("numero_chassis")
         if new_numero_chassis and new_numero_chassis != numero_chassis:
@@ -114,14 +117,16 @@ def modifier_camion(numero_chassis):
         # Update using the id instead of numero_chassis
         response = supabase.table("camions").update(data).eq("id", camion_id).execute()
         if hasattr(response, "error") and response.error:
-            return jsonify({"error": response.error.message}), 500
+            print(f"Update error: {response.error.message}")  # Log the specific error
+            return jsonify({"error": f"Échec de la modification: {response.error.message}"}), 500
 
         if not response.data:
             return jsonify({"error": "Aucun camion modifié"}), 404
 
         return jsonify({"message": "Camion modifié", "data": response.data}), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"Exception: {str(e)}")  # Log the exception
+        return jsonify({"error": f"Erreur inattendue: {str(e)}"}), 500
 
 # -----------------------------
 # Supprimer un camion
