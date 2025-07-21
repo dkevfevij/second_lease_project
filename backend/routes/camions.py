@@ -70,6 +70,11 @@ def add_camion():
             "a_des_alertes": False
         }
 
+        # Check for duplicate numero_chassis
+        existing = supabase.table("camions").select("id").eq("numero_chassis", camion_data["numero_chassis"]).execute()
+        if existing.data and len(existing.data) > 0:
+            return jsonify({"error": "Numéro de châssis déjà existant"}), 400
+
         response = supabase.table("camions").insert(camion_data).execute()
         if hasattr(response, "error") and response.error:
             return jsonify({"error": response.error.message}), 500
@@ -91,12 +96,28 @@ def modifier_camion(numero_chassis):
         if not data:
             return jsonify({"error": "Aucune donnée reçue"}), 400
 
-        response = supabase.table("camions").update(data).eq("numero_chassis", numero_chassis).execute()
+        # Fetch the current camion to get its id
+        current_camion = supabase.table("camions").select("id").eq("numero_chassis", numero_chassis).execute()
+        if hasattr(current_camion, "error") and current_camion.error:
+            return jsonify({"error": current_camion.error.message}), 500
+        if not current_camion.data:
+            return jsonify({"error": "Aucun camion trouvé"}), 404
+        camion_id = current_camion.data[0]["id"]  # Assuming 'id' is the primary key
+
+        # Check for duplicate numero_chassis (excluding the current camion)
+        new_numero_chassis = data.get("numero_chassis")
+        if new_numero_chassis and new_numero_chassis != numero_chassis:
+            existing = supabase.table("camions").select("id").eq("numero_chassis", new_numero_chassis).execute()
+            if existing.data and len(existing.data) > 0 and existing.data[0]["id"] != camion_id:
+                return jsonify({"error": "Numéro de châssis déjà existant"}), 400
+
+        # Update using the id instead of numero_chassis
+        response = supabase.table("camions").update(data).eq("id", camion_id).execute()
         if hasattr(response, "error") and response.error:
             return jsonify({"error": response.error.message}), 500
 
         if not response.data:
-            return jsonify({"error": "Aucun camion trouvé"}), 404
+            return jsonify({"error": "Aucun camion modifié"}), 404
 
         return jsonify({"message": "Camion modifié", "data": response.data}), 200
     except Exception as e:
