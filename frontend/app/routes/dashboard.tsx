@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config";
+import { useLocation } from "react-router-dom";
+
+
 
 interface Camion {
   numero_chassis: string;
@@ -14,6 +17,7 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [role, setRole] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -25,14 +29,20 @@ export default function Dashboard() {
     }
 
     setRole(userRole);
-
-    axios
-      .get(`${API_BASE_URL}/camions`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => setCamions(res.data ?? []))
-      .catch((err) => console.error("Erreur API camions:", err));
+    fetchCamions();
   }, []);
+
+  const fetchCamions = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${API_BASE_URL}/camions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setCamions(res.data ?? []);
+    } catch (err) {
+      console.error("Erreur API camions:", err);
+    }
+  };
 
   const filtered = camions.filter((c) =>
     c.numero_chassis.toLowerCase().includes(search.toLowerCase())
@@ -41,11 +51,11 @@ export default function Dashboard() {
   const badgeColor = (statut: string) => {
     switch (statut.toLowerCase()) {
       case "en_attente":
-        return "bg-red-300 text-red-900";
+        return "bg-gray-300 text-gray-900";
       case "en_cours":
-        return "bg-orange-300 text-orange-900";
-      case "pret_a_livrer":
         return "bg-blue-300 text-blue-900";
+      case "pret_a_livrer":
+        return "bg-yellow-300 text-yellow-900";
       case "livré":
         return "bg-green-300 text-green-900";
       default:
@@ -65,15 +75,15 @@ export default function Dashboard() {
               { icon: "👤", label: "Utilisateurs", path: "/ListeUtilisateurs" },
               { icon: "⚙️", label: "Paramètres", path: "" },
             ].map((item) => (
-              <button
-                key={item.label}
-                onClick={() => navigate(item.path)}
-                className={`block w-full text-left px-3 py-2 hover:bg-gray-100 ${
-                  location.pathname === item.path ? "bg-blue-50 text-blue-600 font-semibold" : ""
-                }`}
-              >
-                <span className="mr-3">{item.icon}</span> {item.label}
-              </button>
+            <button
+            key={item.label}
+            onClick={() => navigate(item.path)}
+            className={`block w-full text-left px-3 py-2 hover:bg-gray-100 ${
+                location.pathname === item.path ? "bg-blue-50 text-blue-600 font-semibold" : ""
+            }`}
+            >
+            {item.label}
+            </button>
             ))}
           </nav>
         </div>

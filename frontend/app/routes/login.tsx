@@ -10,6 +10,7 @@ export default function Login() {
   const [nomUtilisateur, setNomUtilisateur] = useState("");
   const [motDePasse, setMotDePasse] = useState("");
   const [erreur, setErreur] = useState("");
+  const [loading, setLoading] = useState(false); // ⬅️ état de chargement
   const navigate = useNavigate();
 
   const togglePassword = () => setShowPassword(!showPassword);
@@ -17,6 +18,7 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErreur("");
+    setLoading(true); // ⬅️ début du chargement
 
     try {
       const data = await loginUser({
@@ -24,7 +26,6 @@ export default function Login() {
         password: motDePasse,
       });
 
-      console.log("✅ Utilisateur connecté :", data);
       localStorage.setItem("token", data.token);
       localStorage.setItem("role", data.user.role);
       localStorage.setItem("username", data.user.username);
@@ -32,6 +33,8 @@ export default function Login() {
       navigate("/dashboard");
     } catch (err: any) {
       setErreur(err.message || "Erreur inconnue");
+    } finally {
+      setLoading(false); // ⬅️ fin du chargement
     }
   };
 
@@ -92,10 +95,26 @@ export default function Login() {
 
             <button
               type="submit"
-              className="w-full bg-[#1a5c97] hover:bg-[#14497a] text-white px-4 py-2 rounded shadow disabled:opacity-50"
+              disabled={loading}
+              className="w-full bg-[#1a5c97] hover:bg-[#14497a] text-white px-4 py-2 rounded shadow flex justify-center items-center gap-2 disabled:opacity-50"
             >
-              Se connecter
+              {loading ? (
+                <>
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v8h8a8 8 0 01-8 8 8 8 0 01-8-8z"
+                    />
+                  </svg>
+                  Connexion...
+                </>
+              ) : (
+                "Se connecter"
+              )}
             </button>
+
             {erreur && <span className="text-sm text-gray-600">{erreur}</span>}
           </form>
         </div>

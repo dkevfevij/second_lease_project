@@ -4,6 +4,9 @@ import toast, { Toaster } from "react-hot-toast";
 import { Eye, EyeOff } from "lucide-react";
 import { API_BASE_URL } from "../config";
 import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+
+
 
 interface User {
   id: number;
@@ -27,7 +30,8 @@ export default function ListeUtilisateurs() {
   const [role, setRole] = useState("");
   const [username, setUsername] = useState("Utilisateur");
   const navigate = useNavigate();
-
+  const location = useLocation();
+  
   useEffect(() => {
     if (typeof window !== "undefined") {
       setToken(localStorage.getItem("token") || "");

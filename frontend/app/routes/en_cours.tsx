@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../config";
+import { useLocation } from "react-router-dom";
+
+
+
 
 interface Camion {
   statut: string;
@@ -54,7 +58,7 @@ export default function EnCoursCamion() {
   const [token, setToken] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const navigate = useNavigate();
-
+  const location = useLocation();
   useEffect(() => {
     if (typeof window !== "undefined") {
       setToken(localStorage.getItem("token"));
