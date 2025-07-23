@@ -66,19 +66,26 @@ def upload_photo():
 @upload_photo_bp.route('/<int:camion_id>/photos', methods=['GET'])
 def get_photos(camion_id):
     try:
+        print(f"📥 Requête reçue pour les photos du camion ID {camion_id}")
+
         response = supabase.table("camions").select("photos_url").eq("id", camion_id).single().execute()
 
         if not response.data:
+            print(f"❌ Camion avec ID {camion_id} introuvable.")
             return jsonify({"error": "Camion introuvable"}), 404
 
         photos_url = response.data.get("photos_url")
+        print(f"📄 Contenu brut de photos_url : {photos_url}")
+
         photo_list = []
         if photos_url:
             try:
                 photo_list = json.loads(photos_url) if isinstance(photos_url, str) else []
             except json.JSONDecodeError:
-                print(f"Invalid JSON in photos_url for camion_id {camion_id}: {photos_url}")
+                print(f"❌ JSON invalide dans photos_url pour camion ID {camion_id} : {photos_url}")
                 photo_list = [photos_url] if isinstance(photos_url, str) else []
+
+        print(f"📸 Liste de fichiers extraits : {photo_list}")
 
         bucket = "photos"
         public_urls = []
@@ -87,14 +94,18 @@ def get_photos(camion_id):
                 try:
                     url = supabase.storage.from_(bucket).get_public_url(file_name.strip())
                     public_urls.append(url)
+                    print(f"✅ URL publique générée : {url}")
                 except Exception as e:
-                    print(f"File {file_name} not found in bucket {bucket}: {str(e)}")
+                    print(f"❌ Erreur lors de la récupération du fichier {file_name} : {str(e)}")
             else:
-                print(f"Skipping invalid file name: {file_name}")
+                print(f"⏭️ Nom de fichier invalide ou vide : {file_name}")
 
+        print(f"✅ URLs finales à retourner : {public_urls}")
         return jsonify({"photos": public_urls}), 200
 
     except Exception as e:
-        print(f"Unexpected error in get_photos: {str(e)}")
+        print(f"🔥 Erreur inattendue dans get_photos : {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+
 
