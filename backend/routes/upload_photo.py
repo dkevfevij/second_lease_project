@@ -63,49 +63,36 @@ def upload_photo():
         print("🔥 Erreur :", str(e))
         return jsonify({"error": str(e)}), 500
     
-@upload_photo_bp.route('/<int:camion_id>/photos', methods=['GET'])
-def get_photos(camion_id):
+@upload_photo_bp.route('/chassis/<string:numero_chassis>/photos', methods=['GET'])
+def get_photos_by_chassis(numero_chassis):
     try:
-        print(f"📥 Requête reçue pour les photos du camion ID {camion_id}")
+        print(f"🔎 Recherche des photos pour le camion avec n° châssis : {numero_chassis}")
+        camion_res = supabase.table("camions").select("photos_url").eq("numero_chassis", numero_chassis).single().execute()
 
-        response = supabase.table("camions").select("photos_url").eq("id", camion_id).single().execute()
-
-        if not response.data:
-            print(f"❌ Camion avec ID {camion_id} introuvable.")
+        if not camion_res.data:
             return jsonify({"error": "Camion introuvable"}), 404
 
-        photos_url = response.data.get("photos_url")
-        print(f"📄 Contenu brut de photos_url : {photos_url}")
-
+        photos_url = camion_res.data.get("photos_url")
         photo_list = []
         if photos_url:
             try:
                 photo_list = json.loads(photos_url) if isinstance(photos_url, str) else []
-            except json.JSONDecodeError:
-                print(f"❌ JSON invalide dans photos_url pour camion ID {camion_id} : {photos_url}")
+            except Exception as e:
+                print(f"⚠️ JSON invalide : {photos_url}")
                 photo_list = [photos_url] if isinstance(photos_url, str) else []
 
-        print(f"📸 Liste de fichiers extraits : {photo_list}")
+        public_urls = [
+            supabase.storage.from_("photos").get_public_url(p.strip())
+            for p in photo_list if isinstance(p, str) and p.strip()
+        ]
 
-        bucket = "photos"
-        public_urls = []
-        for file_name in photo_list:
-            if isinstance(file_name, str) and file_name.strip():
-                try:
-                    url = supabase.storage.from_(bucket).get_public_url(file_name.strip())
-                    public_urls.append(url)
-                    print(f"✅ URL publique générée : {url}")
-                except Exception as e:
-                    print(f"❌ Erreur lors de la récupération du fichier {file_name} : {str(e)}")
-            else:
-                print(f"⏭️ Nom de fichier invalide ou vide : {file_name}")
-
-        print(f"✅ URLs finales à retourner : {public_urls}")
+        print(f"✅ Photos retournées : {public_urls}")
         return jsonify({"photos": public_urls}), 200
 
     except Exception as e:
-        print(f"🔥 Erreur inattendue dans get_photos : {str(e)}")
+        print(f"🔥 Erreur dans get_photos_by_chassis : {str(e)}")
         return jsonify({"error": str(e)}), 500
+
 
 
 
