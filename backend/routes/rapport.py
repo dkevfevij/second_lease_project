@@ -5,10 +5,17 @@ import jwt
 import os
 import pdfkit
 from functools import wraps
+import platform
+
 
 rapport_bp = Blueprint("rapport", __name__, url_prefix="/api/camions")
 SECRET_KEY = os.environ.get("SECRET_KEY", "SecondLeaseJWTSecret2025")
-wkhtmltopdf_path = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+
+if platform.system() == "Windows":
+    wkhtmltopdf_path = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+else:
+    wkhtmltopdf_path = '/usr/bin/wkhtmltopdf'
+
 pdf_config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
 
 # Authentification décorateur
