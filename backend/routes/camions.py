@@ -67,7 +67,8 @@ def add_camion():
             "photos_url": "",
             "statut": "en_attente",
             "fiche_complete": False,
-            "a_des_alertes": False
+            "a_des_alertes": False,
+            
         }
 
         # Check for duplicate numero_chassis

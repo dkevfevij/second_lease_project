@@ -43,28 +43,41 @@ def get_me():
         "username": request.user['username'],
         "role": request.user['role']
     }), 200
-
+#recupere tous les camions
 @dashboard_bp.route('/camions', methods=['GET'])
 @token_required
 def get_camions():
     try:
-        # On récupère tout (temporairement)
-        result = supabase.table("camions").select("*").execute()
+        # 🔽 Récupération des paramètres
+        sort_order = request.args.get('sort', 'desc')  # 'asc' ou 'desc'
+        statut_filter = request.args.get('statut')  # facultatif
+        alert_filter = request.args.get('alertes')  # 'true' ou 'false'
 
-        # On ne garde que les champs nécessaires
+        query = supabase.table("camions").select("*")
+
+        if statut_filter:
+            query = query.eq("statut", statut_filter)
+        if alert_filter in ["true", "false"]:
+            query = query.eq("a_des_alertes", alert_filter.lower() == "true")
+
+        query = query.order("date_creation", desc=(sort_order == "desc"))
+
+        result = query.execute()
+
         camions_resumés = [
             {
                 "numero_chassis": camion.get("numero_chassis"),
                 "statut": camion.get("statut"),
-                "a_des_alertes": camion.get("a_des_alertes")
+                "a_des_alertes": camion.get("a_des_alertes"),
+                "date_creation": camion.get("date_creation"),
             }
             for camion in result.data
         ]
 
         return jsonify(camions_resumés), 200
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 # ➕ /camions : Ajouter un camion (admin uniquement)
 @dashboard_bp.route('/camions', methods=['POST'])
