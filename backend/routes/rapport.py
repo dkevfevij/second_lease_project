@@ -6,15 +6,15 @@ import os
 import pdfkit
 from functools import wraps
 import platform
+import shutil
 
 
 rapport_bp = Blueprint("rapport", __name__, url_prefix="/api/camions")
 SECRET_KEY = os.environ.get("SECRET_KEY", "SecondLeaseJWTSecret2025")
 
-if platform.system() == "Windows":
-    wkhtmltopdf_path = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
-else:
-    wkhtmltopdf_path = '/usr/bin/wkhtmltopdf'
+wkhtmltopdf_path = shutil.which("wkhtmltopdf")
+if not wkhtmltopdf_path:
+    raise OSError("❌ wkhtmltopdf introuvable. Vérifie l'installation dans l'image Docker.")
 
 pdf_config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
 
