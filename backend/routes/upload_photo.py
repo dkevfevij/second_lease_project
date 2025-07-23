@@ -71,14 +71,8 @@ def get_photos(camion_id):
         if not response.data:
             return jsonify({"error": "Camion introuvable"}), 404
 
-        # 📦 Liste des fichiers stockés
-        raw_list = response.data.get("photos_url", "[]")
-        try:
-            photo_list = json.loads(raw_list) if raw_list else []
-        except:
-            photo_list = []
+        photo_list = json.loads(response.data.get("photos_url", "[]") or "[]")
 
-        # 📸 Génération des URL publiques
         bucket = "photos"
         public_urls = [
             supabase.storage.from_(bucket).get_public_url(file_name)
@@ -89,3 +83,4 @@ def get_photos(camion_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
