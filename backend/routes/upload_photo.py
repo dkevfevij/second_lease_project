@@ -71,16 +71,30 @@ def get_photos(camion_id):
         if not response.data:
             return jsonify({"error": "Camion introuvable"}), 404
 
-        photo_list = json.loads(response.data.get("photos_url", "[]") or "[]")
+        photos_url = response.data.get("photos_url")
+        photo_list = []
+        if photos_url:
+            try:
+                photo_list = json.loads(photos_url) if isinstance(photos_url, str) else []
+            except json.JSONDecodeError:
+                print(f"Invalid JSON in photos_url for camion_id {camion_id}: {photos_url}")
+                photo_list = [photos_url] if isinstance(photos_url, str) else []
 
         bucket = "photos"
-        public_urls = [
-            supabase.storage.from_(bucket).get_public_url(file_name)
-            for file_name in photo_list
-        ]
+        public_urls = []
+        for file_name in photo_list:
+            if isinstance(file_name, str) and file_name.strip():
+                try:
+                    url = supabase.storage.from_(bucket).get_public_url(file_name.strip())
+                    public_urls.append(url)
+                except Exception as e:
+                    print(f"File {file_name} not found in bucket {bucket}: {str(e)}")
+            else:
+                print(f"Skipping invalid file name: {file_name}")
 
         return jsonify({"photos": public_urls}), 200
 
     except Exception as e:
+        print(f"Unexpected error in get_photos: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
