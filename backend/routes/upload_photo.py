@@ -62,3 +62,30 @@ def upload_photo():
     except Exception as e:
         print("🔥 Erreur :", str(e))
         return jsonify({"error": str(e)}), 500
+    
+@upload_photo_bp.route('/<int:camion_id>/photos', methods=['GET'])
+def get_photos(camion_id):
+    try:
+        response = supabase.table("camions").select("photos_url").eq("id", camion_id).single().execute()
+
+        if not response.data:
+            return jsonify({"error": "Camion introuvable"}), 404
+
+        # 📦 Liste des fichiers stockés
+        raw_list = response.data.get("photos_url", "[]")
+        try:
+            photo_list = json.loads(raw_list) if raw_list else []
+        except:
+            photo_list = []
+
+        # 📸 Génération des URL publiques
+        bucket = "photos"
+        public_urls = [
+            supabase.storage.from_(bucket).get_public_url(file_name)
+            for file_name in photo_list
+        ]
+
+        return jsonify({"photos": public_urls}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
