@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Rapport d'Intervention Camion</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 2cm;
+      background-color: #fff;
+      color: #333;
+      font-size: 14px;
+    }
+
+    .header {
+      position: relative;
+      height: 90px;
+      margin-bottom: 30px;
+    }
+
+    .logo-left {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    .logo-right {
+      position: absolute;
+      top: 0;
+      right: 0;
+    }
+
+    .logo-left img, .logo-right img {
+      height: 80px;
+    }
+
+    .title {
+      text-align: center;
+      font-size: 26px;
+      font-weight: bold;
+      color: #2E86C1;
+      border-bottom: 2px solid #B03A2E;
+      padding-bottom: 10px;
+      margin-bottom: 30px;
+    }
+
+    .section {
+      margin-bottom: 30px;
+    }
+
+    .info-grid {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .info-box {
+      flex: 1;
+      border: 1px solid #ccc;
+      border-left: 5px solid #B03A2E;
+      padding: 15px;
+      background-color: #fafafa;
+      border-radius: 6px;
+    }
+
+    .info-box h4 {
+      margin-top: 0;
+      color: #2E86C1;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      page-break-inside: auto;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      font-size: 14px;
+    }
+
+    th {
+      background-color: #f4f4f4;
+      color: #2E86C1;
+      text-align: left;
+    }
+
+    td.center {
+      text-align: center;
+    }
+
+    .yes {
+      color: green;
+      font-weight: bold;
+    }
+
+    .no {
+      color: red;
+      font-weight: bold;
+    }
+
+    .footer {
+      margin-top: 60px;
+      font-size: 12px;
+      text-align: right;
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Logos alignés avec le second à l'extrémité droite -->
+  <div class="header">
+    <div class="logo-left">
+      <img src="{{ logo }}" alt="Logo gauche" />
+    </div>
+    <div class="logo-right">
+      <img src="{{ second_logo }}" alt="Logo droit" />
+    </div>
+  </div>
+
+  <!-- Titre -->
+  <div class="title">RAPPORT D'INTERVENTION CAMION</div>
+
+  <!-- Informations principales -->
+  <div class="section info-grid">
+    <div class="info-box">
+      <h4>Informations Camion</h4>
+      <p>Numéro de châssis : {{ camion.numero_chassis }}</p>
+      <p>Immatriculation : {{ camion.immatriculation_etrangere }}</p>
+      <p>Marque : {{ camion.marque }}</p>
+      <p>Modèle : {{ camion.modele }}</p>
+      <p>Kilométrage : {{ camion.kilometrage }} km</p>
+      <p>Date de mise en circulation : {{ camion.date_mise_en_circulation }}</p>
+    </div>
+
+    <div class="info-box">
+      <h4>Client & Statut</h4>
+      <p><strong>Client :</strong> {{ camion.client or 'Non renseigné' }}</p>
+      <p><strong>Statut actuel :</strong> <span style="color: #B03A2E;">{{ camion.statut.replace('_', ' ') }}</span></p>
+    </div>
+  </div>
+
+  <!-- Prestations -->
+  <div class="section">
+    <h4 style="color: #2E86C1; border-left: 5px solid #B03A2E; padding-left: 8px;">Prestations</h4>
+    <table>
+      <thead>
+        <tr>
+          <th>Référence</th>
+          <th>Description</th>
+          <th class="center">Validée</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in prestations %}
+          <tr style="background-color: {{ '#fdf0f0' if not p.est_validee else 'inherit' }};">
+            <td>{{ p.reference }}</td>
+            <td>{{ p.description }}</td>
+            <td class="center {{ 'yes' if p.est_validee else 'no' }}">{{ 'Oui' if p.est_validee else 'Non' }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pièces -->
+  <div class="section">
+    <h4 style="color: #2E86C1; border-left: 5px solid #B03A2E; padding-left: 8px;">Pièces</h4>
+    <table>
+      <thead>
+        <tr>
+          <th>Référence</th>
+          <th>Désignation</th>
+          <th class="center">Quantité</th>
+          <th class="center">Livrée</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for piece in pieces %}
+          <tr style="background-color: {{ '#fdf0f0' if not piece.est_livree else 'inherit' }}; page-break-inside: avoid;">
+            <td>{{ piece.reference }}</td>
+            <td>{{ piece.designation }}</td>
+            <td class="center">{{ piece.quantite }}</td>
+            <td class="center {{ 'yes' if piece.est_livree else 'no' }}">{{ 'Oui' if piece.est_livree else 'Non' }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pied de page avec date -->
+  <div class="footer">
+    Rapport généré le {{ now }}
+  </div>
+
+</body>
+</html>

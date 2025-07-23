@@ -37,6 +37,10 @@ app.register_blueprint(importation_bp)
 from scrape_erp.login import login_bp
 app.register_blueprint(login_bp, url_prefix="/api")
 
+from routes.rapport import rapport_bp
+app.register_blueprint(rapport_bp)
+
+
 @app.route('/ping')
 def ping():
     return {'message': 'pong'}, 200
