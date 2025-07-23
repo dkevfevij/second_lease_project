@@ -77,6 +77,8 @@ def update_piece(piece_id):
 
 
 # ✅ Changer le statut d'un camion (admin uniquement)
+from datetime import datetime
+
 @fiche_routes_bp.route("/camions/<string:chassis>/changer-statut", methods=["PATCH"])
 @token_required
 @role_required("admin")
@@ -89,13 +91,27 @@ def changer_statut_camion(chassis):
         if nouveau_statut not in statuts_valides:
             return jsonify({"error": f"Statut invalide. Choisissez parmi : {statuts_valides}"}), 400
 
-        check = supabase.table("camions").select("id").eq("numero_chassis", chassis).execute()
+        # Vérifier si le camion existe
+        check = supabase.table("camions").select("id").eq("numero_chassis", chassis).single().execute()
         if not check.data:
             return jsonify({"error": "Camion introuvable"}), 404
 
-        supabase.table("camions").update({"statut": nouveau_statut}).eq("numero_chassis", chassis).execute()
+        # Construire les données à mettre à jour
+        update_data = {"statut": nouveau_statut}
 
-        return jsonify({"message": "Statut mis à jour", "numero_chassis": chassis, "nouveau_statut": nouveau_statut}), 200
+        # Si le nouveau statut est "en_cours", ajouter date_statut_en_cours
+        if nouveau_statut == "en_cours":
+            update_data["date_statut_en_cours"] = datetime.utcnow().isoformat()
+
+        # Appliquer la mise à jour
+        supabase.table("camions").update(update_data).eq("numero_chassis", chassis).execute()
+
+        return jsonify({
+            "message": "Statut mis à jour",
+            "numero_chassis": chassis,
+            "nouveau_statut": nouveau_statut
+        }), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
