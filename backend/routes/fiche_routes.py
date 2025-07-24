@@ -99,7 +99,6 @@ def update_piece(piece_id):
         return jsonify({"error": str(e)}), 500
 
 
-
 # ✅ Changer le statut d'un camion (admin uniquement)
 from datetime import datetime
 
@@ -126,10 +125,14 @@ def changer_statut_camion(chassis):
 
         if nouveau_statut == "en_cours":
             update_data["date_statut_en_cours"] = datetime.utcnow().isoformat()
-            update_data["retour_arriere"] = ancien_statut == "pret_a_livrer"  # ✅ ICI
+            update_data["retour_arriere"] = ancien_statut == "pret_a_livrer"  # Retour arrière confirmé
+
+        elif nouveau_statut == "pret_a_livrer":
+            update_data["retour_arriere"] = True
+            update_data["a_des_alertes"] = False  # ✅ Supprimer les alertes une fois tout validé
 
         else:
-            update_data["retour_arriere"] = False  # reset dans tous les autres cas
+            update_data["retour_arriere"] = False  # Réinitialiser dans tous les autres cas
 
         # Appliquer la mise à jour
         supabase.table("camions").update(update_data).eq("numero_chassis", chassis).execute()
@@ -142,7 +145,6 @@ def changer_statut_camion(chassis):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
     
 # ✅ Vérifier si le camion a une alerte active et mettre à jour a_des_alertes
 @fiche_routes_bp.route("/camions/<string:chassis>/alerte", methods=["GET"])
