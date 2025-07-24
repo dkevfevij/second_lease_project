@@ -31,3 +31,4 @@ class Camion(Base):
     date_creation = Column(TIMESTAMP, default=datetime.utcnow)
     date_derniere_maj = Column(TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow)
     date_statut_en_cours = Column(TIMESTAMP, nullable=True)
+    retour_arriere = Column(Boolean, default=False)

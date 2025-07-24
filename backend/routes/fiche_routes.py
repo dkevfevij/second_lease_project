@@ -32,7 +32,6 @@ def get_elements_fiche(chassis):
         return jsonify({"error": str(e)}), 500
 
 
-# ✅ Mettre à jour une prestation (admin uniquement)
 @fiche_routes_bp.route("/prestations/<int:prestation_id>", methods=["PATCH"])
 @token_required
 @role_required("admin")
@@ -41,14 +40,26 @@ def update_prestation(prestation_id):
         payload = request.get_json()
         est_validee = payload.get("est_validee")
 
-        # Vérification existence
-        check = supabase.table("prestations").select("id").eq("id", prestation_id).execute()
-        if not check.data:
+        # Vérification existence de la prestation et récupération du camion_id
+        prestation_res = supabase.table("prestations").select("camion_id").eq("id", prestation_id).single().execute()
+        if not prestation_res.data:
             return jsonify({"error": "Prestation introuvable"}), 404
 
+        camion_id = prestation_res.data["camion_id"]
+
+        # Vérifier le statut du camion
+        camion = supabase.table("camions").select("statut").eq("id", camion_id).single().execute()
+        if camion.data and camion.data["statut"] == "pret_a_livrer":
+            return jsonify({"error": "Modification refusée : le camion est en état 'pret_a_livrer'"}), 403
+
+        # Mise à jour de la prestation
         supabase.table("prestations").update({"est_validee": est_validee}).eq("id", prestation_id).execute()
 
-        return jsonify({"message": "Prestation mise à jour", "id": prestation_id, "est_validee": est_validee}), 200
+        return jsonify({
+            "message": "Prestation mise à jour",
+            "id": prestation_id,
+            "est_validee": est_validee
+        }), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -63,17 +74,30 @@ def update_piece(piece_id):
         payload = request.get_json()
         est_livree = payload.get("est_livree")
 
-        # Vérification existence
-        check = supabase.table("pieces").select("id").eq("id", piece_id).execute()
-        if not check.data:
+        # Vérification existence de la pièce et récupération du camion_id
+        piece_res = supabase.table("pieces").select("camion_id").eq("id", piece_id).single().execute()
+        if not piece_res.data:
             return jsonify({"error": "Pièce introuvable"}), 404
 
+        camion_id = piece_res.data["camion_id"]
+
+        # Vérifier le statut du camion
+        camion = supabase.table("camions").select("statut").eq("id", camion_id).single().execute()
+        if camion.data and camion.data["statut"] == "pret_a_livrer":
+            return jsonify({"error": "Modification refusée : le camion est en état 'pret_a_livrer'"}), 403
+
+        # Mise à jour de la pièce
         supabase.table("pieces").update({"est_livree": est_livree}).eq("id", piece_id).execute()
 
-        return jsonify({"message": "Pièce mise à jour", "id": piece_id, "est_livree": est_livree}), 200
+        return jsonify({
+            "message": "Pièce mise à jour",
+            "id": piece_id,
+            "est_livree": est_livree
+        }), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 
 # ✅ Changer le statut d'un camion (admin uniquement)
@@ -91,17 +115,25 @@ def changer_statut_camion(chassis):
         if nouveau_statut not in statuts_valides:
             return jsonify({"error": f"Statut invalide. Choisissez parmi : {statuts_valides}"}), 400
 
-        # Vérifier si le camion existe
-        check = supabase.table("camions").select("id").eq("numero_chassis", chassis).single().execute()
-        if not check.data:
+        # Récupérer le camion
+        camion_res = supabase.table("camions").select("*").eq("numero_chassis", chassis).single().execute()
+        if not camion_res.data:
             return jsonify({"error": "Camion introuvable"}), 404
 
-        # Construire les données à mettre à jour
+        camion = camion_res.data
         update_data = {"statut": nouveau_statut}
 
-        # Si le nouveau statut est "en_cours", ajouter date_statut_en_cours
         if nouveau_statut == "en_cours":
-            update_data["date_statut_en_cours"] = datetime.utcnow().isoformat()
+            # Si retour arrière validé, on met à jour la date de début
+            if camion.get("retour_arriere"):
+                update_data["date_statut_en_cours"] = datetime.utcnow().isoformat()
+                update_data["retour_arriere"] = False
+            # Si première fois, on enregistre aussi
+            elif not camion.get("date_statut_en_cours"):
+                update_data["date_statut_en_cours"] = datetime.utcnow().isoformat()
+
+        elif nouveau_statut == "pret_a_livrer":
+            update_data["retour_arriere"] = True
 
         # Appliquer la mise à jour
         supabase.table("camions").update(update_data).eq("numero_chassis", chassis).execute()
@@ -114,4 +146,34 @@ def changer_statut_camion(chassis):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+# ✅ Vérifier si le camion a une alerte active
+@fiche_routes_bp.route("/camions/<string:chassis>/alerte", methods=["GET"])
+@token_required
+def verifier_alerte_camion(chassis):
+    try:
+        res = supabase.table("camions").select("date_statut_en_cours, retour_arriere").eq("numero_chassis", chassis).single().execute()
+        if not res.data:
+            return jsonify({"alerte": False, "reason": "Camion introuvable"}), 404
 
+        date_str = res.data.get("date_statut_en_cours")
+        retour = res.data.get("retour_arriere", False)
+
+        if not date_str:
+            return jsonify({"alerte": False, "reason": "Date statut en cours absente"}), 200
+
+        from datetime import datetime, timedelta
+        date_statut = datetime.fromisoformat(date_str)
+        now = datetime.utcnow()
+        delai = timedelta(days=3) if retour else timedelta(days=7)
+
+        alerte_active = now - date_statut > delai
+
+        return jsonify({
+            "alerte": alerte_active,
+            "retour_arriere": retour,
+            "depassement_jours": (now - date_statut).days,
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
