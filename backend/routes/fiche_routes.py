@@ -146,36 +146,35 @@ def changer_statut_camion(chassis):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
-# ✅ Vérifier si le camion a une alerte active et mettre à jour a_des_alertes
 @fiche_routes_bp.route("/camions/<string:chassis>/alerte", methods=["GET"])
 @token_required
 def verifier_alerte_camion(chassis):
     try:
-        res = supabase.table("camions").select("date_statut_en_cours, retour_arriere").eq("numero_chassis", chassis).single().execute()
+        # 1. Récupération des infos
+        res = supabase.table("camions").select("id, statut, date_statut_en_cours, retour_arriere").eq("numero_chassis", chassis).single().execute()
         if not res.data:
             return jsonify({"alerte": False, "reason": "Camion introuvable"}), 404
 
-        date_str = res.data.get("date_statut_en_cours")
-        retour = res.data.get("retour_arriere", False)
+        camion = res.data
+        statut = camion.get("statut")
+        retour = camion.get("retour_arriere", False)
+        date_str = camion.get("date_statut_en_cours")
 
         if not date_str:
-            # Même si la date est absente, on désactive l'alerte
-            supabase.table("camions").update({
-                "a_des_alertes": False
-            }).eq("numero_chassis", chassis).execute()
             return jsonify({"alerte": False, "reason": "Date statut en cours absente"}), 200
 
         from datetime import datetime, timedelta
         date_statut = datetime.fromisoformat(date_str)
         now = datetime.utcnow()
-        delai = timedelta(days=3) if retour else timedelta(days=7)
 
-        alerte_active = now - date_statut > delai
+        # 2. Déterminer si une alerte est active
+        alerte_active = False
+        if statut == "en_cours":
+            delai = timedelta(days=3) if retour else timedelta(days=7)
+            alerte_active = (now - date_statut) > delai
 
-        # 🔄 Mise à jour du champ a_des_alertes dans la base
-        supabase.table("camions").update({
-            "a_des_alertes": alerte_active
-        }).eq("numero_chassis", chassis).execute()
+        # 3. Mettre à jour le champ a_des_alertes dans la table si nécessaire
+        supabase.table("camions").update({"a_des_alertes": alerte_active}).eq("numero_chassis", chassis).execute()
 
         return jsonify({
             "alerte": alerte_active,
@@ -185,3 +184,4 @@ def verifier_alerte_camion(chassis):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
