@@ -144,7 +144,7 @@ def changer_statut_camion(chassis):
         return jsonify({"error": str(e)}), 500
 
     
-# ✅ Vérifier si le camion a une alerte active
+# ✅ Vérifier si le camion a une alerte active et mettre à jour a_des_alertes
 @fiche_routes_bp.route("/camions/<string:chassis>/alerte", methods=["GET"])
 @token_required
 def verifier_alerte_camion(chassis):
@@ -157,6 +157,10 @@ def verifier_alerte_camion(chassis):
         retour = res.data.get("retour_arriere", False)
 
         if not date_str:
+            # Même si la date est absente, on désactive l'alerte
+            supabase.table("camions").update({
+                "a_des_alertes": False
+            }).eq("numero_chassis", chassis).execute()
             return jsonify({"alerte": False, "reason": "Date statut en cours absente"}), 200
 
         from datetime import datetime, timedelta
@@ -165,6 +169,11 @@ def verifier_alerte_camion(chassis):
         delai = timedelta(days=3) if retour else timedelta(days=7)
 
         alerte_active = now - date_statut > delai
+
+        # 🔄 Mise à jour du champ a_des_alertes dans la base
+        supabase.table("camions").update({
+            "a_des_alertes": alerte_active
+        }).eq("numero_chassis", chassis).execute()
 
         return jsonify({
             "alerte": alerte_active,
