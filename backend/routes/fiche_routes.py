@@ -121,19 +121,15 @@ def changer_statut_camion(chassis):
             return jsonify({"error": "Camion introuvable"}), 404
 
         camion = camion_res.data
+        ancien_statut = camion.get("statut")
         update_data = {"statut": nouveau_statut}
 
         if nouveau_statut == "en_cours":
-            # Si retour arrière validé, on met à jour la date de début
-            if camion.get("retour_arriere"):
-                update_data["date_statut_en_cours"] = datetime.utcnow().isoformat()
-                update_data["retour_arriere"] = False
-            # Si première fois, on enregistre aussi
-            elif not camion.get("date_statut_en_cours"):
-                update_data["date_statut_en_cours"] = datetime.utcnow().isoformat()
+            update_data["date_statut_en_cours"] = datetime.utcnow().isoformat()
+            update_data["retour_arriere"] = ancien_statut == "pret_a_livrer"  # ✅ ICI
 
-        elif nouveau_statut == "pret_a_livrer":
-            update_data["retour_arriere"] = True
+        else:
+            update_data["retour_arriere"] = False  # reset dans tous les autres cas
 
         # Appliquer la mise à jour
         supabase.table("camions").update(update_data).eq("numero_chassis", chassis).execute()
@@ -146,6 +142,7 @@ def changer_statut_camion(chassis):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
     
 # ✅ Vérifier si le camion a une alerte active
 @fiche_routes_bp.route("/camions/<string:chassis>/alerte", methods=["GET"])
