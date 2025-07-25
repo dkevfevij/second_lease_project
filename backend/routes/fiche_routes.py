@@ -251,6 +251,7 @@ def valider_reminder():
         data = request.get_json()
         chassis = data.get("numero_chassis")
         type_controle = data.get("type")
+        commentaire = data.get("commentaire", None)
 
         if not chassis or not type_controle:
             return jsonify({"error": "Champs manquants"}), 400
@@ -273,8 +274,7 @@ def valider_reminder():
 
         compteur = len(controles_res.data or [])
 
-        # 3. Insérer une nouvelle ligne de validation
-        from datetime import datetime
+        # 3. Insertion
         new_entry = {
             "camion_id": camion_id,
             "type": type_controle,
@@ -282,10 +282,11 @@ def valider_reminder():
             "date_controle": datetime.utcnow().isoformat(),
             "is_reminder": True,
             "valide": True,
-            "count": compteur + 1
+            "count": compteur + 1,
+            "commentaire": commentaire
         }
 
-        insert_res = supabase.table("controles").insert(new_entry).execute()
+        supabase.table("controles").insert(new_entry).execute()
 
         return jsonify({
             "message": "Reminder validé",
@@ -295,3 +296,4 @@ def valider_reminder():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean , Text
 from .database import Base
 
 class Controle(Base):
@@ -14,3 +14,4 @@ class Controle(Base):
     is_reminder = Column(Boolean, default=False)  # True si c’est un contrôle périodique
     valide = Column(Boolean, default=False)       # True si validé manuellement
     count = Column(Integer, default=1)            # Nombre de fois effectué
+    commentaire = Column(Text)
