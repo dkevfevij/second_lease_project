@@ -34,6 +34,38 @@ def admin_required(f):
             return jsonify({'message': 'Accès refusé'}), 403
         return f(*args, **kwargs)
     return decorated
+from datetime import datetime
+
+def check_reminder(camion_id):
+    try:
+        now = datetime.utcnow()
+        reminders_config = {
+            "test_batterie": 15,
+            "controle_visuel": 3,
+            "demarrage": 7
+        }
+
+        for reminder_type, max_days in reminders_config.items():
+            res = supabase.table("controles") \
+                .select("date_controle") \
+                .eq("camion_id", camion_id) \
+                .eq("type", reminder_type) \
+                .eq("valide", True) \
+                .eq("is_reminder", True) \
+                .order("date_controle", desc=True) \
+                .limit(1) \
+                .execute()
+
+            if res.data:
+                date = datetime.fromisoformat(res.data[0]["date_controle"])
+                if (now - date).days > max_days:
+                    return True  # délai dépassé
+            else:
+                return True  # jamais fait = rappel requis
+
+        return False
+    except:
+        return False
 
 # 🔐 /me : Infos utilisateur connecté
 @dashboard_bp.route('/me', methods=['GET'])
@@ -68,7 +100,7 @@ def get_camions():
             {
                 "numero_chassis": camion.get("numero_chassis"),
                 "statut": camion.get("statut"),
-                "a_des_alertes": camion.get("a_des_alertes"),
+                "a_des_alertes": camion.get("a_des_alertes") or check_reminder(camion.get("id")),
                 "date_creation": camion.get("date_creation"),
             }
             for camion in result.data
