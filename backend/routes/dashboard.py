@@ -39,6 +39,12 @@ from datetime import datetime
 def check_reminder(camion_id):
     try:
         now = datetime.utcnow()
+
+        # Récupérer le statut du camion
+        camion_res = supabase.table("camions").select("statut").eq("id", camion_id).single().execute()
+        if not camion_res.data or camion_res.data["statut"] != "pret_a_livrer":
+            return False  # Ne pas déclencher de reminder
+
         reminders_config = {
             "test_batterie": 15,
             "controle_visuel": 3,
@@ -59,13 +65,22 @@ def check_reminder(camion_id):
             if res.data:
                 date = datetime.fromisoformat(res.data[0]["date_controle"])
                 if (now - date).days > max_days:
-                    return True  # délai dépassé
+                    return True
             else:
-                return True  # jamais fait = rappel requis
+                # ⚠️ Ne pas déclencher le reminder tant que le délai n’est pas dépassé depuis le passage à pret_a_livrer
+                camion = camion_res.data
+                date_statut = camion.get("date_statut_en_cours")
+                if not date_statut:
+                    continue  # impossible de calculer
+
+                date_passage = datetime.fromisoformat(date_statut)
+                if (now - date_passage).days > max_days:
+                    return True  # délai dépassé et aucun test encore fait
 
         return False
     except:
         return False
+
 
 # 🔐 /me : Infos utilisateur connecté
 @dashboard_bp.route('/me', methods=['GET'])
@@ -85,7 +100,7 @@ def get_camions():
         statut_filter = request.args.get('statut')  # facultatif
         alert_filter = request.args.get('alertes')  # 'true' ou 'false'
 
-        query = supabase.table("camions").select("*")
+        query = supabase.table("camions").select("id, numero_chassis, statut, a_des_alertes, date_creation")
 
         if statut_filter:
             query = query.eq("statut", statut_filter)
