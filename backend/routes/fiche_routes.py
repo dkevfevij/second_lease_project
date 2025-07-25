@@ -185,3 +185,113 @@ def verifier_alerte_camion(chassis):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@fiche_routes_bp.route("/camions/<string:chassis>/reminders", methods=["GET"])
+@token_required
+def get_reminders_camion(chassis):
+    try:
+        # 1. Récupérer l’ID du camion
+        res = supabase.table("camions").select("id").eq("numero_chassis", chassis).single().execute()
+        if not res.data:
+            return jsonify({"error": "Camion introuvable"}), 404
+
+        camion_id = res.data["id"]
+        now = datetime.utcnow()
+
+        # 2. Config par type
+        types_reminders = {
+            "test_batterie": 15,
+            "controle_visuel": 3,
+            "demarrage": 7
+        }
+
+        result = {}
+
+        for type_controle, max_jours in types_reminders.items():
+            # 🧾 Récupère le dernier contrôle valide
+            controle_res = supabase.table("controles") \
+                .select("date_controle, count") \
+                .eq("camion_id", camion_id) \
+                .eq("type", type_controle) \
+                .eq("valide", True) \
+                .eq("is_reminder", True) \
+                .order("date_controle", desc=True) \
+                .limit(1) \
+                .execute()
+
+            if controle_res.data:
+                last = datetime.fromisoformat(controle_res.data[0]["date_controle"])
+                jours_ecoules = (now - last).days
+                reminder = jours_ecoules > max_jours
+                count = controle_res.data[0].get("count", 1)
+            else:
+                last = None
+                jours_ecoules = None
+                reminder = True  # Aucun contrôle → toujours rappel
+                count = 0
+
+            result[type_controle] = {
+                "rappel": reminder,
+                "dernier": last.isoformat() if last else None,
+                "jours_depuis_dernier": jours_ecoules,
+                "count": count
+            }
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
+@fiche_routes_bp.route("/reminders/valider", methods=["POST"])
+@token_required
+@role_required("admin")
+def valider_reminder():
+    try:
+        data = request.get_json()
+        chassis = data.get("numero_chassis")
+        type_controle = data.get("type")
+
+        if not chassis or not type_controle:
+            return jsonify({"error": "Champs manquants"}), 400
+
+        # 1. Récupérer le camion
+        camion_res = supabase.table("camions").select("id").eq("numero_chassis", chassis).single().execute()
+        if not camion_res.data:
+            return jsonify({"error": "Camion introuvable"}), 404
+
+        camion_id = camion_res.data["id"]
+
+        # 2. Compter combien de fois ce test a déjà été validé
+        controles_res = supabase.table("controles") \
+            .select("id") \
+            .eq("camion_id", camion_id) \
+            .eq("type", type_controle) \
+            .eq("is_reminder", True) \
+            .eq("valide", True) \
+            .execute()
+
+        compteur = len(controles_res.data or [])
+
+        # 3. Insérer une nouvelle ligne de validation
+        from datetime import datetime
+        new_entry = {
+            "camion_id": camion_id,
+            "type": type_controle,
+            "resultat": "Validé",
+            "date_controle": datetime.utcnow().isoformat(),
+            "is_reminder": True,
+            "valide": True,
+            "count": compteur + 1
+        }
+
+        insert_res = supabase.table("controles").insert(new_entry).execute()
+
+        return jsonify({
+            "message": "Reminder validé",
+            "type": type_controle,
+            "count": compteur + 1
+        }), 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
