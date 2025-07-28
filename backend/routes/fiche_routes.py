@@ -109,32 +109,51 @@ def changer_statut_camion(chassis):
     try:
         payload = request.get_json()
         nouveau_statut = payload.get("nouveau_statut")
-        statuts_valides = ["en_attente", "en_cours", "pret_a_livrer", "livre"]
+        statuts_valides = ["en_attente", "en_cours", "pret_a_livrer", "livree"]
 
         if nouveau_statut not in statuts_valides:
             return jsonify({"error": f"Statut invalide. Choisissez parmi : {statuts_valides}"}), 400
 
-        # Récupérer le camion
         camion_res = supabase.table("camions").select("*").eq("numero_chassis", chassis).single().execute()
         if not camion_res.data:
             return jsonify({"error": "Camion introuvable"}), 404
 
         camion = camion_res.data
+        camion_id = camion.get("id")
         ancien_statut = camion.get("statut")
         update_data = {"statut": nouveau_statut}
 
         if nouveau_statut == "en_cours":
             update_data["date_statut_en_cours"] = datetime.utcnow().isoformat()
-            update_data["retour_arriere"] = ancien_statut == "pret_a_livrer"  # Retour arrière confirmé
+            update_data["retour_arriere"] = ancien_statut == "pret_a_livrer"
+            supabase.table("controles").delete().eq("camion_id", camion_id).eq("is_reminder", True).eq("valide", False).execute()
+            update_data["reminders_initialises"] = False
+            update_data["a_des_alertes"] = False
 
         elif nouveau_statut == "pret_a_livrer":
             update_data["retour_arriere"] = True
-            update_data["a_des_alertes"] = False  # ✅ Supprimer les alertes une fois tout validé
+            update_data["a_des_alertes"] = False
+            if not camion.get("reminders_initialises"):
+                for type_controle in ["test_batterie", "controle_visuel", "demarrage"]:
+                    supabase.table("controles").insert({
+                        "camion_id": camion_id,
+                        "type": type_controle,
+                        "date_controle": datetime.utcnow().isoformat(),
+                        "valide": False,
+                        "is_reminder": True,
+                        "count": 1,
+                        "commentaire": None
+                    }).execute()
+                update_data["reminders_initialises"] = True
+
+        elif nouveau_statut == "livree":
+            supabase.table("controles").delete().eq("camion_id", camion_id).eq("is_reminder", True).eq("valide", False).execute()
+            update_data["reminders_initialises"] = False
+            update_data["a_des_alertes"] = False
 
         else:
-            update_data["retour_arriere"] = False  # Réinitialiser dans tous les autres cas
+            update_data["retour_arriere"] = False
 
-        # Appliquer la mise à jour
         supabase.table("camions").update(update_data).eq("numero_chassis", chassis).execute()
 
         return jsonify({
@@ -207,8 +226,8 @@ def get_reminders_camion(chassis):
         result = {}
 
         for type_controle, max_jours in types_reminders.items():
-            # 🧾 Récupère le dernier contrôle valide
-            controle_res = supabase.table("controles") \
+            # 🔍 Récupère le dernier contrôle valide
+            valide_res = supabase.table("controles") \
                 .select("date_controle, count") \
                 .eq("camion_id", camion_id) \
                 .eq("type", type_controle) \
@@ -218,15 +237,26 @@ def get_reminders_camion(chassis):
                 .limit(1) \
                 .execute()
 
-            if controle_res.data:
-                last = datetime.fromisoformat(controle_res.data[0]["date_controle"])
+            # 🔍 Vérifie s’il y a un contrôle non validé en attente
+            en_attente_res = supabase.table("controles") \
+                .select("id") \
+                .eq("camion_id", camion_id) \
+                .eq("type", type_controle) \
+                .eq("valide", False) \
+                .eq("is_reminder", True) \
+                .execute()
+
+            has_pending = len(en_attente_res.data) > 0
+
+            if valide_res.data:
+                last = datetime.fromisoformat(valide_res.data[0]["date_controle"])
                 jours_ecoules = (now - last).days
-                reminder = jours_ecoules > max_jours
-                count = controle_res.data[0].get("count", 1)
+                reminder = jours_ecoules > max_jours and has_pending
+                count = valide_res.data[0].get("count", 1)
             else:
                 last = None
                 jours_ecoules = None
-                reminder = True  # Aucun contrôle → toujours rappel
+                reminder = has_pending  # Aucun contrôle validé mais il en existe un en attente
                 count = 0
 
             result[type_controle] = {
@@ -235,6 +265,10 @@ def get_reminders_camion(chassis):
                 "jours_depuis_dernier": jours_ecoules,
                 "count": count
             }
+
+        # ➕ Met à jour a_des_alertes si au moins un rappel actif
+        alerte_active = any(rem["rappel"] for rem in result.values())
+        supabase.table("camions").update({"a_des_alertes": alerte_active}).eq("id", camion_id).execute()
 
         return jsonify(result), 200
 
@@ -256,26 +290,16 @@ def valider_reminder():
         if not chassis or not type_controle:
             return jsonify({"error": "Champs manquants"}), 400
 
-        # 1. Récupérer le camion
         camion_res = supabase.table("camions").select("id").eq("numero_chassis", chassis).single().execute()
         if not camion_res.data:
             return jsonify({"error": "Camion introuvable"}), 404
 
         camion_id = camion_res.data["id"]
 
-        # 2. Compter combien de fois ce test a déjà été validé
-        controles_res = supabase.table("controles") \
-            .select("id") \
-            .eq("camion_id", camion_id) \
-            .eq("type", type_controle) \
-            .eq("is_reminder", True) \
-            .eq("valide", True) \
-            .execute()
-
+        controles_res = supabase.table("controles").select("id").eq("camion_id", camion_id).eq("type", type_controle).eq("is_reminder", True).eq("valide", True).execute()
         compteur = len(controles_res.data or [])
 
-        # 3. Insertion
-        new_entry = {
+        supabase.table("controles").insert({
             "camion_id": camion_id,
             "type": type_controle,
             "resultat": "Validé",
@@ -284,9 +308,17 @@ def valider_reminder():
             "valide": True,
             "count": compteur + 1,
             "commentaire": commentaire
-        }
+        }).execute()
 
-        supabase.table("controles").insert(new_entry).execute()
+        supabase.table("controles").insert({
+            "camion_id": camion_id,
+            "type": type_controle,
+            "date_controle": datetime.utcnow().isoformat(),
+            "valide": False,
+            "is_reminder": True,
+            "count": compteur + 1,
+            "commentaire": None
+        }).execute()
 
         return jsonify({
             "message": "Reminder validé",
@@ -296,4 +328,3 @@ def valider_reminder():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
