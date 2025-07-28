@@ -231,7 +231,6 @@ def get_reminders_camion(chassis):
                 .select("id, date_controle, valide, count") \
                 .eq("camion_id", camion_id) \
                 .eq("type", type_controle) \
-                .eq("is_reminder", True) \
                 .order("date_controle", desc=True) \
                 .limit(1) \
                 .execute()
@@ -242,15 +241,20 @@ def get_reminders_camion(chassis):
             count = 0
 
             if controle_res.data:
+                print(f"Données pour {type_controle}: {controle_res.data}")
                 controle = controle_res.data[0]
                 last = datetime.fromisoformat(controle["date_controle"])
                 jours_ecoules = (now - last).days
                 count = controle.get("count", 1)
-                # Un rappel est actif si le contrôle n'est pas validé ET le délai est dépassé
                 if not controle["valide"] and jours_ecoules > max_jours:
                     reminder = True
-                    # Met à jour is_reminder dans la base si nécessaire
-                    supabase.table("controles").update({"is_reminder": True}).eq("id", controle["id"]).execute()
+                    try:
+                        supabase.table("controles").update({"is_reminder": True}).eq("id", controle["id"]).execute()
+                        print(f"Mise à jour is_reminder à True pour ID {controle['id']}")
+                    except Exception as e:
+                        print(f"Erreur mise à jour: {e}")
+            else:
+                print(f"Aucune donnée pour {type_controle}")
 
             result[type_controle] = {
                 "rappel": reminder,
@@ -267,7 +271,6 @@ def get_reminders_camion(chassis):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 
 @fiche_routes_bp.route("/reminders/valider", methods=["POST"])
