@@ -32,3 +32,4 @@ class Camion(Base):
     date_derniere_maj = Column(TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow)
     date_statut_en_cours = Column(TIMESTAMP, nullable=True)
     retour_arriere = Column(Boolean, default=False)
+    reminders_initialises = Column(Boolean, default=False)  # Flag pour ne pas recréer à chaque changement
