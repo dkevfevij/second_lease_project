@@ -2,11 +2,12 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Rapport d'Intervention Camion</title>
+  <title>Rapport d'Intervention</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      margin: 2cm;
+      margin: 2cm 2cm 2cm 2cm;
+      padding-top: 0;
       background-color: #fff;
       color: #333;
       font-size: 14px;
@@ -14,34 +15,34 @@
 
     .header {
       position: relative;
-      height: 90px;
-      margin-bottom: 30px;
+      height: 100px;
+      margin: 0 0 30px 0;
+      padding-top: 0;
     }
 
     .logo-left {
       position: absolute;
-      top: 0;
+      top: -10px;
       left: 0;
     }
 
     .logo-right {
       position: absolute;
-      top: 0;
+      top: -10px;
       right: 0;
     }
 
     .logo-left img {
-  height: 150px; /* ou 120px si tu veux encore plus grand */
-}
+      height: 100px;
+    }
 
-.logo-right img {
-  height: 100px;
-}
-
+    .logo-right img {
+      height: 80px;
+    }
 
     .title {
       text-align: center;
-      font-size: 26px;
+      font-size: 24px;
       font-weight: bold;
       color: #2E86C1;
       border-bottom: 2px solid #B03A2E;
@@ -130,7 +131,9 @@
   </div>
 
   <!-- Titre -->
-  <div class="title">RAPPORT D'INTERVENTION CAMION</div>
+  <div class="title">
+    RAPPORT D'INTERVENTION – {{ camion.numero_chassis }}
+  </div>
 
   <!-- Informations principales -->
   <div class="section info-grid">
@@ -150,7 +153,6 @@
       <p><strong>Début des interventions :</strong> {{ date_statut_en_cours }}</p>
       <p><strong>Statut actuel :</strong> <span style="color: #B03A2E;">{{ camion.statut.replace('_', ' ') }}</span></p>
       <p><strong>Client :</strong> {{ camion.client or 'Non renseigné' }}</p>
-     
     </div>
   </div>
 
@@ -167,11 +169,11 @@
       </thead>
       <tbody>
         {% for p in prestations %}
-          <tr style="background-color: {{ '#fdf0f0' if not p.est_validee else 'inherit' }};">
-            <td>{{ p.reference }}</td>
-            <td>{{ p.description }}</td>
-            <td class="center {{ 'yes' if p.est_validee else 'no' }}">{{ 'Oui' if p.est_validee else 'Non' }}</td>
-          </tr>
+        <tr style="background-color: {{ '#fdf0f0' if not p.est_validee else 'inherit' }};">
+          <td>{{ p.reference }}</td>
+          <td>{{ p.description }}</td>
+          <td class="center {{ 'yes' if p.est_validee else 'no' }}">{{ 'Oui' if p.est_validee else 'Non' }}</td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
@@ -191,17 +193,18 @@
       </thead>
       <tbody>
         {% for piece in pieces %}
-          <tr style="background-color: {{ '#fdf0f0' if not piece.est_livree else 'inherit' }}; page-break-inside: avoid;">
-            <td>{{ piece.reference }}</td>
-            <td>{{ piece.designation }}</td>
-            <td class="center">{{ piece.quantite }}</td>
-            <td class="center {{ 'yes' if piece.est_livree else 'no' }}">{{ 'Oui' if piece.est_livree else 'Non' }}</td>
-          </tr>
+        <tr style="background-color: {{ '#fdf0f0' if not piece.est_livree else 'inherit' }}; page-break-inside: avoid;">
+          <td>{{ piece.reference }}</td>
+          <td>{{ piece.designation }}</td>
+          <td class="center">{{ piece.quantite }}</td>
+          <td class="center {{ 'yes' if piece.est_livree else 'no' }}">{{ 'Oui' if piece.est_livree else 'Non' }}</td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-{% if camion.statut in ["pret_a_livrer", "livre"] %}
+
+  {% if camion.statut in ["pret_a_livrer", "livre"] %}
   <div class="section">
     <h4 style="color: #2E86C1; border-left: 5px solid #B03A2E; padding-left: 8px;">Rappels (Contrôles périodiques)</h4>
     <table>
@@ -217,19 +220,19 @@
       </thead>
       <tbody>
         {% for ctrl in controles %}
-          <tr style="background-color: {{ '#fff5f5' if not ctrl.valide else '#f9fdf9' }};">
-            <td>{{ ctrl.type.replace('_', ' ') }}</td>
-            <td>{{ ctrl.formatted_date }}</td>
-            <td>{{ ctrl.resultat or "—" }}</td>
-            <td class="center {{ 'yes' if ctrl.valide else 'no' }}">{{ 'Oui' if ctrl.valide else 'Non' }}</td>
-            <td class="center">{{ ctrl.count or 1 }}</td>
-            <td>{{ ctrl.commentaire or "—" }}</td>
-          </tr>
+        <tr style="background-color: {{ '#fff5f5' if not ctrl.valide else '#f9fdf9' }};">
+          <td>{{ ctrl.type.replace('_', ' ') }}</td>
+          <td>{{ ctrl.formatted_date }}</td>
+          <td>{{ ctrl.resultat or "—" }}</td>
+          <td class="center {{ 'yes' if ctrl.valide else 'no' }}">{{ 'Oui' if ctrl.valide else 'Non' }}</td>
+          <td class="center">{{ ctrl.count or 1 }}</td>
+          <td>{{ ctrl.commentaire or "—" }}</td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-{% endif %}
+  {% endif %}
 
   <!-- Pied de page avec date -->
   <div class="footer">
