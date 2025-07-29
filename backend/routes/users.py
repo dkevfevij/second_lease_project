@@ -103,3 +103,37 @@ def toggle_statut_utilisateur(user_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@users_bp.route("/<int:user_id>", methods=["PUT"])
+@token_required
+@admin_required
+def modifier_utilisateur(user_id):
+    try:
+        data = request.get_json()
+        champs = {}
+
+        if "nom" in data:
+            champs["nom"] = data["nom"]
+        if "prenom" in data:
+            champs["prenom"] = data["prenom"]
+        if "role" in data:
+            champs["role"] = data["role"]
+        if "mot_de_passe" in data and data["mot_de_passe"]:
+            hashed_pw = bcrypt.hashpw(data["mot_de_passe"].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            champs["mot_de_passe"] = hashed_pw
+
+        update = supabase.table("users").update(champs).eq("id", user_id).execute()
+        return jsonify({"message": "Utilisateur modifié", "data": update.data}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+@users_bp.route("/<int:user_id>", methods=["DELETE"])
+@token_required
+@admin_required
+def supprimer_utilisateur(user_id):
+    try:
+        delete = supabase.table("users").delete().eq("id", user_id).execute()
+        return jsonify({"message": "Utilisateur supprimé"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
