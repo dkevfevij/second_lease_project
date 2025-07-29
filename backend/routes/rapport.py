@@ -17,14 +17,25 @@ if not wkhtmltopdf_path:
 pdf_config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
 
 # 🔧 Utilitaire de formatage de date
-def format_date(date_str):
+def format_date(date_input):
     try:
-        if not date_str:
+        if not date_input:
             return "—"
-        dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-        return dt.strftime("%d/%m/%Y")
-    except Exception:
+        
+        if isinstance(date_input, datetime):
+            return date_input.strftime("%d/%m/%Y")
+        
+        if isinstance(date_input, str):
+            # Si c'est une string ISO (ex: '2025-06-30')
+            return datetime.fromisoformat(date_input).strftime("%d/%m/%Y")
+        
+        # Si c’est un objet date (ex : type Date de SQLAlchemy ou Supabase)
+        return date_input.strftime("%d/%m/%Y")
+    
+    except Exception as e:
+        print("❌ Erreur format_date :", e)
         return "—"
+
 
 # 🔐 Décorateur d'authentification
 def token_required(f):
@@ -58,7 +69,7 @@ def generate_pdf(chassis):
         formatted_creation = format_date(camion.get("date_creation"))
         formatted_en_cours = format_date(camion.get("date_statut_en_cours"))
         formatted_mec = format_date(camion.get("date_mise_en_circulation"))
-        
+
         prestations = supabase.table("prestations").select("*").eq("camion_id", camion_id).execute().data or []
         pieces = supabase.table("pieces").select("*").eq("camion_id", camion_id).execute().data or []
 

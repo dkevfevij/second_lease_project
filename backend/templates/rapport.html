@@ -30,9 +30,14 @@
       right: 0;
     }
 
-    .logo-left img, .logo-right img {
-      height: 80px;
-    }
+    .logo-left img {
+  height: 100px; /* ou 120px si tu veux encore plus grand */
+}
+
+.logo-right img {
+  height: 80px;
+}
+
 
     .title {
       text-align: center;
@@ -136,7 +141,7 @@
       <p><strong>Marque :</strong> {{ camion.marque }}</p>
       <p><strong>Modèle :</strong> {{ camion.modele }}</p>
       <p><strong>Kilométrage :</strong> {{ camion.kilometrage }} km</p>
-      <p><strong>Date de mise en circulation :</strong> {{ camion.date_mise_en_circulation }}</p>
+      <p><strong>Date de mise en circulation :</strong> {{ date_mise_en_circulation }}</p>
     </div>
 
     <div class="info-box">
