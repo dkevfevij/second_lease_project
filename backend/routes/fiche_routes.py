@@ -126,7 +126,8 @@ def changer_statut_camion(chassis):
         if nouveau_statut == "en_cours":
             update_data["date_statut_en_cours"] = datetime.utcnow().isoformat()
             update_data["retour_arriere"] = ancien_statut == "pret_a_livrer"
-            supabase.table("controles").delete().eq("camion_id", camion_id).eq("is_reminder", True).eq("valide", False).execute()
+            # Supprimer tous les rappels non validés, quel que soit is_reminder
+            supabase.table("controles").delete().eq("camion_id", camion_id).eq("valide", False).execute()
             update_data["reminders_initialises"] = False
             update_data["a_des_alertes"] = False
 
