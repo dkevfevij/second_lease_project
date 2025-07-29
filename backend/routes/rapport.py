@@ -5,9 +5,7 @@ import jwt
 import os
 import pdfkit
 from functools import wraps
-import platform
 import shutil
-
 
 rapport_bp = Blueprint("rapport", __name__, url_prefix="/api/camions")
 SECRET_KEY = os.environ.get("SECRET_KEY", "SecondLeaseJWTSecret2025")
@@ -43,12 +41,19 @@ def generate_pdf(chassis):
         camion = camion_res.data
         if not camion:
             return jsonify({"error": "Camion introuvable"}), 404
-        
+
         date_creation = camion.get("date_creation")
         date_statut_en_cours = camion.get("date_statut_en_cours")
         camion_id = camion.get("id")
+
         prestations = supabase.table("prestations").select("*").eq("camion_id", camion_id).execute().data or []
         pieces = supabase.table("pieces").select("*").eq("camion_id", camion_id).execute().data or []
+
+        # 🔁 Récupérer les contrôles périodiques si statut = prêt à livrer ou livré
+        controles = []
+        if camion.get("statut") in ["pret_a_livrer", "livre"]:
+            controles_res = supabase.table("controles").select("*").eq("camion_id", camion_id).eq("is_reminder", True).execute()
+            controles = controles_res.data or []
 
         now = datetime.now().strftime('%d/%m/%Y %H:%M')
 
@@ -57,15 +62,15 @@ def generate_pdf(chassis):
         second_logo_path = os.path.join(os.getcwd(), 'static', 'logo_second_lease.png').replace('\\', '/')
 
         html = render_template("rapport.html",
-                       camion=camion,
-                       prestations=prestations,
-                       pieces=pieces,
-                       now=now,
-                       date_creation=date_creation,
-                       date_statut_en_cours=date_statut_en_cours,
-                       logo=logo_path,
-                       second_logo=second_logo_path)
-
+                               camion=camion,
+                               prestations=prestations,
+                               pieces=pieces,
+                               now=now,
+                               date_creation=date_creation,
+                               date_statut_en_cours=date_statut_en_cours,
+                               controles=controles,
+                               logo=logo_path,
+                               second_logo=second_logo_path)
 
         options = {
             'margin-top': '1cm',
@@ -75,6 +80,7 @@ def generate_pdf(chassis):
             'enable-local-file-access': None,
             'page-size': 'A4'
         }
+
         pdf = pdfkit.from_string(html, False, configuration=pdf_config, options=options)
         response = make_response(pdf)
         response.headers['Content-Type'] = 'application/pdf'
