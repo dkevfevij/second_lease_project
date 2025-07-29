@@ -210,15 +210,18 @@ def verifier_alerte_camion(chassis):
 @token_required
 def get_reminders_camion(chassis):
     try:
-        # Récupérer l’ID du camion
-        res = supabase.table("camions").select("id").eq("numero_chassis", chassis).single().execute()
+        # Récupérer l’ID du camion et le statut des rappels
+        res = supabase.table("camions").select("id, statut, rappels_termines").eq("numero_chassis", chassis).single().execute()
         if not res.data:
             return jsonify({"error": "Camion introuvable"}), 404
 
-        camion_id = res.data["id"]
+        camion = res.data
+        if camion.get("rappels_termines", False) or camion.get("statut") == "livree":
+            return jsonify({})  # Pas de rappels si terminés ou si statut est "livree"
+
+        camion_id = camion["id"]
         now = datetime.utcnow()
 
-        # Config par type
         types_reminders = {
             "test_batterie": 15,
             "controle_visuel": 3,
@@ -228,7 +231,6 @@ def get_reminders_camion(chassis):
         result = {}
 
         for type_controle, max_jours in types_reminders.items():
-            # Récupère le dernier contrôle (validé ou non) pour ce type
             controle_res = supabase.table("controles") \
                 .select("id, date_controle, valide, count") \
                 .eq("camion_id", camion_id) \
@@ -243,20 +245,14 @@ def get_reminders_camion(chassis):
             count = 0
 
             if controle_res.data:
-                print(f"Données pour {type_controle}: {controle_res.data}")
                 controle = controle_res.data[0]
-                last = datetime.fromisoformat(controle["date_controle"])
+                last = datetime.fromisoformat(controle["date_controle"].replace("Z", "+00:00"))
                 jours_ecoules = (now - last).days
                 count = controle.get("count", 1)
                 if not controle["valide"] and jours_ecoules > max_jours:
                     reminder = True
-                    try:
+                    if not controle.get("is_reminder", False):
                         supabase.table("controles").update({"is_reminder": True}).eq("id", controle["id"]).execute()
-                        print(f"Mise à jour is_reminder à True pour ID {controle['id']}")
-                    except Exception as e:
-                        print(f"Erreur mise à jour: {e}")
-            else:
-                print(f"Aucune donnée pour {type_controle}")
 
             result[type_controle] = {
                 "rappel": reminder,
@@ -265,16 +261,13 @@ def get_reminders_camion(chassis):
                 "count": count
             }
 
-        # Met à jour a_des_alertes si au moins un rappel actif
         alerte_active = any(rem["rappel"] for rem in result.values())
         supabase.table("camions").update({"a_des_alertes": alerte_active}).eq("id", camion_id).execute()
 
         return jsonify(result), 200
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
+    
 @fiche_routes_bp.route("/reminders/valider", methods=["POST"])
 @token_required
 @role_required("admin")

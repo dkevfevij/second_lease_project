@@ -64,6 +64,7 @@ def generate_pdf(chassis):
             return jsonify({"error": "Camion introuvable"}), 404
 
         camion_id = camion.get("id")
+        statut = camion.get("statut")
 
         # Formatage des dates principales
         formatted_creation = format_date(camion.get("date_creation"))
@@ -73,13 +74,14 @@ def generate_pdf(chassis):
         prestations = supabase.table("prestations").select("*").eq("camion_id", camion_id).execute().data or []
         pieces = supabase.table("pieces").select("*").eq("camion_id", camion_id).execute().data or []
 
-        # 🔁 Récupérer les contrôles périodiques si applicable
-        controles = []
-        if camion.get("statut") in ["pret_a_livrer", "livree"]:
-            controles_res = supabase.table("controles").select("*").eq("camion_id", camion_id).eq("is_reminder", True).execute()
-            controles = controles_res.data or []
-            for ctrl in controles:
-                ctrl["formatted_date"] = format_date(ctrl.get("date_controle"))
+        # 🔁 Récupérer tous les contrôles (valides et rappels marqués), sauf les rappels en "en_cours"
+        controles_res = supabase.table("controles").select("*").eq("camion_id", camion_id)
+        if statut != "en_cours":
+            controles_res = controles_res.eq("is_reminder", True).or_("valide", "eq", True)
+        controles_res = controles_res.order("date_controle", desc=True).execute()
+        controles = controles_res.data or []
+        for ctrl in controles:
+            ctrl["formatted_date"] = format_date(ctrl.get("date_controle"))
 
         now = datetime.now().strftime('%d/%m/%Y %H:%M')
 
@@ -98,9 +100,7 @@ def generate_pdf(chassis):
                         controles=controles,
                         logo=logo_path,
                         second_logo=second_logo_path
-)
-
-
+        )
 
         options = {
             'margin-top': '1cm',
