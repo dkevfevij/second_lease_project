@@ -75,7 +75,7 @@ def generate_pdf(chassis):
 
         # 🔁 Récupérer les contrôles périodiques si applicable
         controles = []
-        if camion.get("statut") in ["pret_a_livrer", "livre"]:
+        if camion.get("statut") in ["pret_a_livrer", "livree"]:
             controles_res = supabase.table("controles").select("*").eq("camion_id", camion_id).eq("is_reminder", True).execute()
             controles = controles_res.data or []
             for ctrl in controles:
