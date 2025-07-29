@@ -43,7 +43,9 @@ def generate_pdf(chassis):
         camion = camion_res.data
         if not camion:
             return jsonify({"error": "Camion introuvable"}), 404
-
+        
+        date_creation = camion.get("date_creation")
+        date_statut_en_cours = camion.get("date_statut_en_cours")
         camion_id = camion.get("id")
         prestations = supabase.table("prestations").select("*").eq("camion_id", camion_id).execute().data or []
         pieces = supabase.table("pieces").select("*").eq("camion_id", camion_id).execute().data or []
@@ -55,12 +57,15 @@ def generate_pdf(chassis):
         second_logo_path = os.path.join(os.getcwd(), 'static', 'logo_second_lease.png').replace('\\', '/')
 
         html = render_template("rapport.html",
-                               camion=camion,
-                               prestations=prestations,
-                               pieces=pieces,
-                               now=now,
-                               logo=logo_path,
-                               second_logo=second_logo_path)
+                       camion=camion,
+                       prestations=prestations,
+                       pieces=pieces,
+                       now=now,
+                       date_creation=date_creation,
+                       date_statut_en_cours=date_statut_en_cours,
+                       logo=logo_path,
+                       second_logo=second_logo_path)
+
 
         options = {
             'margin-top': '1cm',

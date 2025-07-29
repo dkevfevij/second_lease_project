@@ -143,6 +143,9 @@
       <h4>Client & Statut</h4>
       <p><strong>Client :</strong> {{ camion.client or 'Non renseigné' }}</p>
       <p><strong>Statut actuel :</strong> <span style="color: #B03A2E;">{{ camion.statut.replace('_', ' ') }}</span></p>
+      <p><strong>Date de création :</strong> {{ date_creation[:10] if date_creation else "Non disponible" }}</p>
+      <p><strong>1er passage à “en cours” :</strong> {{ date_statut_en_cours[:10] if date_statut_en_cours else "Non disponible" }}</p>
+
     </div>
   </div>
 
