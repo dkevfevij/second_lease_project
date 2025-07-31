@@ -389,27 +389,30 @@ export default function EnCoursCamion() {
 
   return (
     <div className="flex min-h-screen">
-      <aside className="w-64 bg-white shadow-lg p-4 flex flex-col justify-between">
-        <div>
-          <img src="/logo2.png" alt="Bonne Route Auto" className="h-24 mb-4" />
-          <nav className="space-y-3 text-base">
-            {[
-              { icon: "", label: "Dashboard", path: "/dashboard" },
-              { icon: "", label: "Ajouter Camions", path: "/ajouter-camion" },
-              { icon: "", label: "Utilisateurs", path: "/ListeUtilisateurs" },
-            ].map((item) => (
-              <button
-                key={item.label}
-                onClick={() => navigate(item.path)}
-                className={`block w-full text-left px-3 py-2 hover:bg-gray-100 ${
-                  location.pathname === item.path ? "bg-blue-50 text-blue-600 font-semibold" : ""
-                }`}
-              >
-                <span className="mr-3">{item.icon}</span> {item.label}
-              </button>
-            ))}
-          </nav>
-        </div>
+  <aside className="w-64 bg-white shadow-lg p-4 flex flex-col justify-between">
+    <div>
+      <img src="/logo2.png" alt="Bonne Route Auto" className="h-24 mb-4" />
+      <nav className="space-y-3 text-base">
+        {[
+          { icon: "", label: "Dashboard", path: "/dashboard", adminOnly: false },
+          { icon: "", label: "Ajouter Camions", path: "/ajouter-camion", adminOnly: true },
+          { icon: "", label: "Utilisateurs", path: "/ListeUtilisateurs", adminOnly: true },
+        ]
+          .filter((item) => !(item.adminOnly && role === "viewer")) // 👈 cache si viewer
+          .map((item) => (
+            <button
+              key={item.label}
+              onClick={() => navigate(item.path)}
+              className={`block w-full text-left px-3 py-2 hover:bg-gray-100 ${
+                location.pathname === item.path ? "bg-blue-50 text-blue-600 font-semibold" : ""
+              }`}
+            >
+              <span className="mr-3">{item.icon}</span> {item.label}
+            </button>
+          ))}
+      </nav>
+    </div>
+
         <button
           onClick={() => navigate("/login")}
           className="text-base text-red-600 hover:underline flex items-center gap-2"
