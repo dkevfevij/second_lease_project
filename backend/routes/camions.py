@@ -162,4 +162,22 @@ def get_camion_by_numero(numero_chassis):
 
         return jsonify(response.data[0]), 200
     except Exception as e:
+        return jsonify({"error": str(e)}), #
+
+# -----------------------------
+# Récupérer un camion pour édition (sans champs internes)
+# -----------------------------
+@camions_bp.route("/<string:numero_chassis>/edition", methods=["GET"])
+@token_required
+def get_camion_for_edit(numero_chassis):
+    try:
+        response = supabase.table("camions").select(
+            "numero_chassis, immatriculation_etrangere, marque, modele, kilometrage, date_mise_en_circulation, client, inspection_reception, memos, statut"
+        ).eq("numero_chassis", numero_chassis).single().execute()
+
+        if not response.data:
+            return jsonify({"error": "Camion introuvable"}), 404
+
+        return jsonify(response.data), 200
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
