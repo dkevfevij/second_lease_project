@@ -191,7 +191,7 @@ def verifier_alerte_camion(chassis):
         # 2. Déterminer si une alerte est active
         alerte_active = False
         if statut == "en_cours":
-            delai = timedelta(days=3) if retour else timedelta(days=7)
+            delai = timedelta(days=1) if retour else timedelta(days=1)
             alerte_active = (now - date_statut) > delai
 
         # 3. Mettre à jour le champ a_des_alertes dans la table si nécessaire
@@ -223,9 +223,9 @@ def get_reminders_camion(chassis):
         now = datetime.utcnow()
 
         types_reminders = {
-            "test_batterie": 15,
-            "controle_visuel": 3,
-            "demarrage": 7
+            "test_batterie": 1,
+            "controle_visuel": 1,
+            "demarrage": 1
         }
 
         result = {}
