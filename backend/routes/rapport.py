@@ -69,12 +69,15 @@ def generate_pdf(chassis):
         formatted_creation = format_date(camion.get("date_creation"))
         formatted_en_cours = format_date(camion.get("date_statut_en_cours"))
         formatted_mec = format_date(camion.get("date_mise_en_circulation"))
+        formatted_livraison = format_date(camion.get("date_livraison"))
+
 
         prestations = supabase.table("prestations").select("*").eq("camion_id", camion_id).execute().data or []
         pieces = supabase.table("pieces").select("*").eq("camion_id", camion_id).execute().data or []
 
         # 🔁 Récupérer les contrôles périodiques si applicable
         controles = []
+        
         if camion.get("statut") in ["pret_a_livrer", "livree"]:
             controles_res = supabase.table("controles").select("*").eq("camion_id", camion_id).eq("is_reminder", True).execute()
             controles = controles_res.data or []
@@ -87,18 +90,21 @@ def generate_pdf(chassis):
         logo_path = os.path.join(os.getcwd(), 'static', 'logo_BR.png').replace('\\', '/')
         second_logo_path = os.path.join(os.getcwd(), 'static', 'logo_second_lease.png').replace('\\', '/')
 
-        html = render_template("rapport.html",
-                        camion=camion,
-                        prestations=prestations,
-                        pieces=pieces,
-                        now=now,
-                        date_creation=formatted_creation,
-                        date_statut_en_cours=formatted_en_cours,
-                        date_mise_en_circulation=formatted_mec,
-                        controles=controles,
-                        logo=logo_path,
-                        second_logo=second_logo_path
+        html = render_template(
+                "rapport.html",
+                camion=camion,
+                prestations=prestations,
+                pieces=pieces,
+                now=now,
+                date_creation=formatted_creation,
+                date_statut_en_cours=formatted_en_cours,
+                date_mise_en_circulation=formatted_mec,
+                date_livraison=formatted_livraison,  # 🆕
+                controles=controles,
+                logo=logo_path,
+                second_logo=second_logo_path
 )
+
 
 
 

@@ -151,6 +151,9 @@
       <h4>Client & Statut</h4>
       <p><strong>Date d’enregistrement :</strong> {{ date_creation }}</p>
       <p><strong>Début des interventions :</strong> {{ date_statut_en_cours }}</p>
+    {% if camion.statut == "livree" %}
+      <p><strong>Camion livré le :</strong> {{ date_livraison }}</p>
+        {% endif %}
       <p><strong>Statut actuel :</strong> <span style="color: #B03A2E;">{{ camion.statut.replace('_', ' ') }}</span></p>
       <p><strong>Client :</strong> {{ camion.client or 'Non renseigné' }}</p>
     </div>
@@ -204,7 +207,7 @@
     </table>
   </div>
 
-  {% if camion.statut in ["pret_a_livrer", "livre"] %}
+  {% if camion.statut in ["pret_a_livrer", "livree"] %}
   <div class="section">
     <h4 style="color: #2E86C1; border-left: 5px solid #B03A2E; padding-left: 8px;">Rappels (Contrôles périodiques)</h4>
     <table>
