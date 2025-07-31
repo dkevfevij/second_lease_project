@@ -3,10 +3,7 @@ import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 import { Eye, EyeOff } from "lucide-react";
 import { API_BASE_URL } from "../config";
-import { useNavigate } from "react-router-dom";
-import { useLocation } from "react-router-dom";
-
-
+import { useNavigate, useLocation } from "react-router-dom";
 
 interface User {
   id: number;
@@ -14,12 +11,14 @@ interface User {
   prenom: string;
   role: string;
   actif: boolean;
+  identifiant?: string;
 }
 
 export default function ListeUtilisateurs() {
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [nom, setNom] = useState("");
   const [prenom, setPrenom] = useState("");
   const [identifiant, setIdentifiant] = useState("");
@@ -31,13 +30,11 @@ export default function ListeUtilisateurs() {
   const [username, setUsername] = useState("Utilisateur");
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      setToken(localStorage.getItem("token") || "");
-      setRole(localStorage.getItem("role") || "");
-      setUsername(localStorage.getItem("username") || "Utilisateur");
-    }
+    setToken(localStorage.getItem("token") || "");
+    setRole(localStorage.getItem("role") || "");
+    setUsername(localStorage.getItem("username") || "Utilisateur");
   }, []);
 
   useEffect(() => {
@@ -59,6 +56,64 @@ export default function ListeUtilisateurs() {
     }
   };
 
+  useEffect(() => {
+    if (token) fetchUsers();
+  }, [token]);
+
+  const ajouterMembre = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nom || !prenom || !motDePasse) return toast.error("Champs requis !");
+    try {
+      await axios.post(
+        `${API_BASE_URL}/api/users`,
+        { nom, prenom, mot_de_passe: motDePasse, role: roleNew },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success("✅ Membre ajouté !");
+      fermerModale();
+      fetchUsers();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "❌ Erreur");
+    }
+  };
+
+  const modifierUtilisateur = async () => {
+    if (!selectedUser) return;
+    try {
+      await axios.put(
+        `${API_BASE_URL}/api/users/${selectedUser.id}`,
+        {
+          nom,
+          prenom,
+          role: roleNew,
+          mot_de_passe: motDePasse || undefined,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success("✅ Membre modifié");
+      fermerModale();
+      fetchUsers();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "❌ Erreur");
+    }
+  };
+
+  const supprimerUtilisateur = async () => {
+    if (!selectedUser) return;
+    const confirm = window.confirm("⚠️ Supprimer ce membre ?");
+    if (!confirm) return;
+    try {
+      await axios.delete(`${API_BASE_URL}/api/users/${selectedUser.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success("🗑️ Membre supprimé");
+      fermerModale();
+      fetchUsers();
+    } catch (err: any) {
+      toast.error("Erreur suppression");
+    }
+  };
+
   const toggleActif = async (id: number) => {
     try {
       await axios.patch(
@@ -66,46 +121,31 @@ export default function ListeUtilisateurs() {
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast.success("✅ Statut mis à jour");
       fetchUsers();
     } catch {
-      toast.error("❌ Impossible de changer le statut");
+      toast.error("Erreur statut");
     }
   };
 
-  const ajouterMembre = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nom || !prenom || !motDePasse) {
-      toast.error("Tous les champs sont requis !");
-      return;
-    }
-
-    try {
-      await axios.post(
-        `${API_BASE_URL}/api/users`,
-        {
-          nom,
-          prenom,
-          mot_de_passe: motDePasse,
-          role: roleNew,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast.success("✅ Membre ajouté !");
-      setShowModal(false);
-      setNom("");
-      setPrenom("");
-      setMotDePasse("");
-      setIdentifiant("");
-      fetchUsers();
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || "❌ Erreur lors de l'ajout");
-    }
+  const ouvrirModaleEdition = (user: User) => {
+    setSelectedUser(user);
+    setNom(user.nom);
+    setPrenom(user.prenom);
+    setRoleNew(user.role);
+    setIdentifiant(user.identifiant || "");
+    setMotDePasse("");
+    setShowModal(true);
   };
 
-  useEffect(() => {
-    if (token) fetchUsers();
-  }, [token]);
+  const fermerModale = () => {
+    setSelectedUser(null);
+    setNom("");
+    setPrenom("");
+    setRoleNew("viewer");
+    setMotDePasse("");
+    setIdentifiant("");
+    setShowModal(false);
+  };
 
   const filtered = users.filter((u) =>
     (u.nom + u.prenom + u.role).toLowerCase().includes(search.toLowerCase())
@@ -113,15 +153,15 @@ export default function ListeUtilisateurs() {
 
   return (
     <div className="flex min-h-screen">
+      <Toaster position="top-right" />
       <aside className="w-64 bg-white shadow-lg p-4 flex flex-col justify-between">
         <div>
-          <img src="/logo.svg" alt="Bonne Route Auto" className="h-20 mb-6" />
+          <img src="/logo2.png" className="h-24 mb-4" />
           <nav className="space-y-3 text-base">
             {[
-              { icon: "🏠", label: "Dashboard", path: "/dashboard" },
-              { icon: "🚛", label: "Ajouter Camions", path: "/ajouter-camion" },
-              { icon: "👤", label: "Utilisateurs", path: "/ListeUtilisateurs" },
-              { icon: "⚙️", label: "Paramètres", path: "" },
+              { label: "Dashboard", path: "/dashboard" },
+              { label: "Ajouter Camions", path: "/ajouter-camion" },
+              { label: "Utilisateurs", path: "/ListeUtilisateurs" },
             ].map((item) => (
               <button
                 key={item.label}
@@ -130,38 +170,25 @@ export default function ListeUtilisateurs() {
                   location.pathname === item.path ? "bg-blue-50 text-blue-600 font-semibold" : ""
                 }`}
               >
-                <span className="mr-3">{item.icon}</span> {item.label}
+                {item.label}
               </button>
             ))}
           </nav>
         </div>
-        <button
-          onClick={() => {
-            localStorage.clear();
-            navigate("/login");
-          }}
-          className="text-base text-red-600 hover:underline flex items-center gap-2"
-        >
-          <span>🔓</span> Se déconnecter
-        </button>
+        <button onClick={() => { localStorage.clear(); navigate("/login"); }}
+          className="text-base text-red-600 hover:underline">Se déconnecter</button>
       </aside>
 
       <main className="flex-1 p-8 bg-gray-50">
-        <Toaster position="top-right" />
         <div className="max-w-5xl mx-auto">
           <div className="bg-white rounded-lg shadow-md">
-            <div className="flex items-center justify-between px-6 py-4 border-b" style={{ backgroundColor: "#1a5c97" }}>
-              <h2 className="text-lg font-bold text-white">Liste des utilisateurs</h2>
+            <div className="flex justify-between items-center px-6 py-4 border-b" style={{ backgroundColor: "#1a5c97" }}>
+              <h2 className="text-white font-bold">Liste des utilisateurs</h2>
               {role === "admin" && (
-                <button
-                  onClick={() => setShowModal(true)}
-                  className="bg-white text-[#1a5c97] rounded-full w-8 h-8 flex items-center justify-center hover:bg-blue-100 font-bold text-lg"
-                >
-                  +
-                </button>
+                <button onClick={() => setShowModal(true)}
+                  className="bg-white text-[#1a5c97] w-8 h-8 rounded-full font-bold hover:bg-blue-100">+</button>
               )}
             </div>
-
             <div className="px-6 py-4">
               <input
                 type="text"
@@ -170,122 +197,85 @@ export default function ListeUtilisateurs() {
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full max-w-xs px-4 py-2 border rounded shadow-sm mb-4 text-sm"
               />
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm border-collapse">
-                  <thead>
-                    <tr style={{ backgroundColor: "#e6eef5", color: "#1a5c97" }}>
-                      <th className="px-4 py-2 text-left">Nom</th>
-                      <th className="px-4 py-2 text-left">Prénom</th>
-                      <th className="px-4 py-2 text-left">Rôle</th>
-                      <th className="px-4 py-2 text-center">Actif</th>
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr style={{ backgroundColor: "#e6eef5", color: "#1a5c97" }}>
+                    <th className="px-4 py-2 text-left">Nom</th>
+                    <th className="px-4 py-2 text-left">Prénom</th>
+                    <th className="px-4 py-2 text-left">Rôle</th>
+                    <th className="px-4 py-2 text-center">Actif</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((u, i) => (
+                    <tr key={u.id}
+                      className={`${i % 2 === 0 ? "bg-white" : "bg-blue-50"} cursor-pointer`}
+                      onClick={() => ouvrirModaleEdition(u)}
+                    >
+                      <td className="px-4 py-2">{u.nom}</td>
+                      <td className="px-4 py-2">{u.prenom}</td>
+                      <td className="px-4 py-2">{u.role}</td>
+                      <td className="px-4 py-2 text-center">
+                        {role === "admin" ? (
+                          <input type="checkbox" checked={u.actif} onChange={(e) => {
+                            e.stopPropagation();
+                            toggleActif(u.id);
+                          }} />
+                        ) : (
+                          <span>{u.actif ? "Oui" : "Non"}</span>
+                        )}
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((u, i) => (
-                      <tr key={u.id} className={i % 2 === 0 ? "bg-white" : "bg-blue-50"}>
-                        <td className="px-4 py-2">{u.nom}</td>
-                        <td className="px-4 py-2">{u.prenom}</td>
-                        <td className="px-4 py-2">{u.role}</td>
-                        <td className="px-4 py-2 text-center">
-                          {role === "admin" ? (
-                            <input
-                              type="checkbox"
-                              checked={u.actif}
-                              onChange={() => toggleActif(u.id)}
-                              className="h-4 w-4 cursor-pointer"
-                            />
-                          ) : (
-                            <span>{u.actif ? "Oui" : "Non"}</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
 
           {showModal && (
-            <div className="fixed inset-0 bg-white text-[#1a5c97] bg-opacity-50 flex justify-center items-center z-50">
+            <div className="fixed inset-0 bg-white bg-opacity-50 flex justify-center items-center z-50">
               <div className="bg-white w-[550px] rounded-lg shadow-lg p-8 relative border border-blue-200">
-                <h3 className="text-xl font-semibold text-[#1a5c97] mb-6 text-center">Ajouter un membre</h3>
-                <form className="space-y-4" onSubmit={ajouterMembre}>
+                <h3 className="text-xl font-semibold text-[#1a5c97] mb-6 text-center">
+                  {selectedUser ? "Modifier le membre" : "Ajouter un membre"}
+                </h3>
+                <form
+                  className="space-y-4"
+                  onSubmit={selectedUser ? (e) => { e.preventDefault(); modifierUtilisateur(); } : ajouterMembre}
+                >
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">Nom</label>
-                      <input
-                        type="text"
-                        value={nom}
-                        onChange={(e) => setNom(e.target.value)}
-                        className="w-full px-3 py-2 border rounded"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">Prénom</label>
-                      <input
-                        type="text"
-                        value={prenom}
-                        onChange={(e) => setPrenom(e.target.value)}
-                        className="w-full px-3 py-2 border rounded"
-                      />
-                    </div>
+                    <input value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Nom" className="px-3 py-2 border rounded" />
+                    <input value={prenom} onChange={(e) => setPrenom(e.target.value)} placeholder="Prénom" className="px-3 py-2 border rounded" />
                   </div>
-
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Identifiant</label>
-                    <input
-                      type="text"
-                      value={identifiant}
-                      readOnly
-                      className="w-full px-3 py-2 bg-gray-100 border rounded text-gray-500"
-                    />
-                  </div>
-
+                  <input readOnly value={identifiant} className="w-full px-3 py-2 bg-gray-100 border rounded text-gray-500" />
                   <div className="relative">
-                    <label className="text-sm font-medium text-gray-700">Mot de passe</label>
                     <input
                       type={showPassword ? "text" : "password"}
                       value={motDePasse}
                       onChange={(e) => setMotDePasse(e.target.value)}
+                      placeholder="Mot de passe"
                       className="w-full px-3 py-2 border rounded"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute top-[34px] right-3 text-gray-600"
-                    >
+                    <button type="button" onClick={() => setShowPassword(!showPassword)}
+                      className="absolute top-2.5 right-3 text-gray-600">
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
-
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Rôle</label>
-                    <select
-                      value={roleNew}
-                      onChange={(e) => setRoleNew(e.target.value)}
-                      className="w-full px-3 py-2 border rounded"
-                    >
-                      <option value="viewer">Viewer</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </div>
-
-                  <div className="flex justify-end space-x-3 pt-4">
-                    <button
-                      type="button"
-                      onClick={() => setShowModal(false)}
-                      className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded"
-                    >
-                      Annuler
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-[#1a5c97] hover:bg-[#14497a] text-white rounded shadow"
-                    >
-                      Ajouter
-                    </button>
+                  <select value={roleNew} onChange={(e) => setRoleNew(e.target.value)} className="w-full px-3 py-2 border rounded">
+                    <option value="viewer">Viewer</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  <div className="flex justify-between pt-4">
+                    {selectedUser && (
+                      <button type="button" onClick={supprimerUtilisateur} className="text-red-600 hover:underline">Supprimer</button>
+                    )}
+                    <div className="space-x-3">
+                      <button type="button" onClick={fermerModale} className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded">
+                        Annuler
+                      </button>
+                      <button type="submit" className="px-4 py-2 bg-[#1a5c97] hover:bg-[#14497a] text-white rounded shadow">
+                        {selectedUser ? "Modifier" : "Ajouter"}
+                      </button>
+                    </div>
                   </div>
                 </form>
               </div>

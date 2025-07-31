@@ -67,21 +67,21 @@ export default function AjouterCamion() {
   const handleSearch = async () => {
     setLoadingSearch(true);
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/camions/${searchNumero}`, {
+      const res = await axios.get(`${API_BASE_URL}/api/camions/${searchNumero}/edition`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.data) {
         setFormData(res.data);
         setInitialNumero(res.data.numero_chassis);
         setLocked(false);
-        toast.success("✅ Camion trouvé");
+        toast.success("Camion trouvé");
       } else {
-        toast.error("❌ Camion introuvable");
+        toast.error("Camion introuvable");
         setLocked(true);
         resetForm();
       }
     } catch (err) {
-      toast.error("❌ Erreur lors de la recherche");
+      toast.error(" Erreur lors de la recherche");
       setLocked(true);
     } finally {
       setLoadingSearch(false);
@@ -97,7 +97,7 @@ export default function AjouterCamion() {
     }
 
     try {
-      const res = await axios.get(`${API_BASE_URL}/camions`, {
+      const res = await axios.get(`${API_BASE_URL}/api/camions/liste_complets`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -105,7 +105,7 @@ export default function AjouterCamion() {
       const existe = camions.some((c: { numero_chassis: string }) => c.numero_chassis === value);
 
       if (existe) {
-        toast.error("❌ Ce numéro de châssis existe déjà.");
+        toast.error("Ce numéro de châssis existe déjà.");
         setLocked(true);
         setFormData((prev) => ({ ...prev, numero_chassis: "" }));
         setInitialNumero(null);
@@ -139,11 +139,11 @@ export default function AjouterCamion() {
         headers: { Authorization: `Bearer ${token}` },
       });
       await uploadPhotos(formData.numero_chassis);
-      toast.success("✅ Camion ajouté");
+      toast.success("Camion ajouté");
       resetForm();
     } catch (err: any) {
       console.error("Submit Error:", err.response?.data || err.message);
-      toast.error(err.response?.data?.error?.includes("duplicate key") ? "❌ Numéro déjà existant" : "❌ Erreur d'envoi");
+      toast.error(err.response?.data?.error?.includes("duplicate key") ? " Numéro déjà existant" : " Erreur d'envoi");
     } finally {
       setLoadingSubmit(false);
     }
@@ -151,7 +151,7 @@ export default function AjouterCamion() {
 
   const handleUpdate = async () => {
     if (!validateForm() || !initialNumero) {
-      toast.error("❌ Impossible de modifier : numéro d'origine introuvable");
+      toast.error(" Impossible de modifier : numéro d'origine introuvable");
       return;
     }
     setLoadingUpdate(true);
@@ -161,11 +161,11 @@ export default function AjouterCamion() {
       });
       await uploadPhotos(formData.numero_chassis);
       setInitialNumero(formData.numero_chassis); // Update to new numero_chassis if successful
-      toast.success("✏️ Camion mis à jour");
+      toast.success("Camion mis à jour");
     } catch (err: any) {
       console.error(err);
       const errorMsg = err.response?.data?.error || "Erreur lors de la mise à jour";
-      toast.error(`❌ ${errorMsg.includes("duplicate key") ? "Numéro déjà existant" : errorMsg}`);
+      toast.error(` ${errorMsg.includes("duplicate key") ? "Numéro déjà existant" : errorMsg}`);
     } finally {
       setLoadingUpdate(false);
     }
@@ -174,7 +174,7 @@ export default function AjouterCamion() {
   const handleDelete = async () => {
     if (!formData.numero_chassis) return;
     if (!window.confirm("Voulez-vous vraiment supprimer ce camion ? Cette action est définitive.")) {
-      toast("❌ Suppression annulée", { icon: "⚠️" });
+      toast(" Suppression annulée", { icon: "⚠️" });
       return;
     }
     setLoadingDelete(true);
@@ -183,9 +183,9 @@ export default function AjouterCamion() {
         headers: { Authorization: `Bearer ${token}` },
       });
       resetForm();
-      toast.success("🗑️ Camion supprimé");
+      toast.success(" Camion supprimé");
     } catch (err) {
-      toast.error("❌ Erreur lors de la suppression");
+      toast.error("Erreur lors de la suppression");
     } finally {
       setLoadingDelete(false);
     }
@@ -222,12 +222,12 @@ export default function AjouterCamion() {
     ];
     for (let field of required) {
       if (!formData[field as keyof CamionData]) {
-        toast.error(`❌ Champ manquant : ${field.replace(/_/g, " ")}`);
+        toast.error(` Champ manquant : ${field.replace(/_/g, " ")}`);
         return false;
       }
     }
     if (formData.kilometrage < 0) {
-      toast.error("❌ Le kilométrage ne peut pas être négatif");
+      toast.error("Le kilométrage ne peut pas être négatif");
       return false;
     }
     return true;
@@ -238,7 +238,7 @@ export default function AjouterCamion() {
     const names: string[] = [];
     for (let file of files) {
       if (file.size > MAX_FILE_SIZE) {
-        toast.error(`❌ ${file.name} dépasse 10MB`);
+        toast.error(` ${file.name} dépasse 10MB`);
         continue;
       }
       const form = new FormData();
@@ -250,7 +250,7 @@ export default function AjouterCamion() {
         });
         names.push(res.data.file_name);
       } catch {
-        toast.error("❌ Erreur upload photo");
+        toast.error("Erreur upload photo");
       }
     }
     setUploaded(names);
@@ -261,12 +261,12 @@ export default function AjouterCamion() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
     if (selectedFiles.length + files.length > MAX_FILES) {
-      toast.error(`❌ Limite de ${MAX_FILES} fichiers atteinte`);
+      toast.error(`Limite de ${MAX_FILES} fichiers atteinte`);
       return;
     }
     const validFiles = selectedFiles.filter(file => file.size <= MAX_FILE_SIZE);
     if (validFiles.length < selectedFiles.length) {
-      toast.error("❌ Certains fichiers dépassent 10MB");
+      toast.error(" Certains fichiers dépassent 10MB");
     }
     setFiles(prev => [...prev, ...validFiles]);
     validFiles.forEach(file => {
@@ -285,13 +285,13 @@ export default function AjouterCamion() {
     <div className="flex min-h-screen">
       <aside className="w-64 bg-white shadow-lg p-4 flex flex-col justify-between">
         <div>
-          <img src="/logo.svg" alt="Bonne Route Auto" className="h-20 mb-6" />
+          <img src="/logo2.png" alt="Bonne Route Auto" className="h-24 mb-4" />
           <nav className="space-y-3 text-base">
             {[
-              { icon: "🏠", label: "Dashboard", path: "/dashboard" },
-              { icon: "🚛", label: "Ajouter Camions", path: "/ajouter-camion" },
-              { icon: "👤", label: "Utilisateurs", path: "/ListeUtilisateurs" },
-              { icon: "⚙️", label: "Paramètres", path: "" },
+              { icon: "", label: "Dashboard", path: "/dashboard" },
+              { icon: "", label: "Ajouter Camions", path: "/ajouter-camion" },
+              { icon: "", label: "Utilisateurs", path: "/ListeUtilisateurs" },
+              
             ].map((item) => (
               <button
                 key={item.label}
@@ -309,7 +309,7 @@ export default function AjouterCamion() {
           onClick={() => navigate("/login")}
           className="text-base text-red-600 hover:underline flex items-center gap-2"
         >
-          <span>🔓</span> Se déconnecter
+          <span></span> Se déconnecter
         </button>
       </aside>
 
@@ -317,7 +317,7 @@ export default function AjouterCamion() {
         <Toaster position="top-right" />
         <div className="max-w-5xl mx-auto">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-3xl font-bold text-[#1a5c97]">Numéro de Châssis : {formData.numero_chassis || "N/A"}</h2>
+            <h2 className="text-3xl font-bold text-gray-500"> {formData.numero_chassis || "N/A"}</h2>
             <div className="flex items-center gap-3">
               <span
                 className={`text-sm px-4 py-1 rounded-full ${
@@ -330,7 +330,7 @@ export default function AjouterCamion() {
             </div>
           </div>
 
-          <h2 className="text-3xl font-bold text-[#1a5c97] mb-6 text-center">Ajouter / Modifier un camion</h2>
+          <h2 className="text-3xl font-bold text-[#1a5c97] mb-6 text-center">Enregistrer un camion</h2>
 
           <div className="flex items-center mb-6 space-x-4">
             <input
@@ -491,7 +491,8 @@ export default function AjouterCamion() {
 }
 
 const statutColor = {
-  en_attente: "bg-yellow-100 text-yellow-800",
-  en_cours: "bg-blue-100 text-blue-800",
-  pret_a_livrer: "bg-green-100 text-green-800",
+  en_attente: "bg-[#fef2f2] text-[#b91c1c] border border-[#fca5a5]",       // rouge pâle élégant
+  en_cours: "bg-[#fff7ed] text-[#c2410c] border border-[#fdba74]",        // orange subtil et pro
+  pret_a_livrer: "bg-[#ecfdf5] text-[#047857] border border-[#6ee7b7]",   // vert clair pastel
+  livree: "bg-[#eef2ff] text-[#4338ca] border border-[#a5b4fc]",          // bleu doux et lisible
 };

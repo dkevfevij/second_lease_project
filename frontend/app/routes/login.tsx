@@ -43,9 +43,8 @@ export default function Login() {
       <div className="flex w-[1100px] h-[600px] bg-white shadow-2xl rounded-lg overflow-hidden">
         {/* Section gauche */}
         <div className="w-1/2 bg-gray-50 px-10 py-12 flex flex-col justify-center items-center text-center relative">
-          <img src="/logo.svg" alt="Bonne Route Logo" className="w-48 mb-6" />
-          <h2 className="text-4xl font-bold text-blue-900">BONNE ROUTE <span className="text-blue-900">AUTO</span></h2>
-          <p className="mt-4 text-md text-gray-700 font-medium">Bienvenue sur Bonne Route</p>
+          <img src="/logo2.png" alt="Bonne Route Logo" className="w-130 mb-3" />
+          <p className="mt-4 text-md text-gray-700 font-medium">Bienvenue sur Bonne Route Auto</p>
           <p className="mt-1 text-sm text-gray-600 px-6">
             Application de suivi des camions Second Lease.
           </p>
