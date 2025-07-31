@@ -40,6 +40,8 @@ app.register_blueprint(login_bp, url_prefix="/api")
 from routes.rapport import rapport_bp
 app.register_blueprint(rapport_bp)
 
+from routes.camions_complets import camions_complets_bp
+app.register_blueprint(camions_complets_bp)
 
 @app.route('/ping')
 def ping():
