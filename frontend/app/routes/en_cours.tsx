@@ -5,6 +5,7 @@ import { API_BASE_URL } from "../config";
 
 interface Camion {
   id?: number;
+  numero_chassis: string; // 👈 Ajouté ici
   statut: string;
   immatriculation_etrangere: string;
   marque: string;
@@ -18,6 +19,7 @@ interface Camion {
   retour_arriere?: boolean;
   date_livraison?: string;
 }
+
 
 interface Prestation {
   id: number;
@@ -422,6 +424,101 @@ export default function EnCoursCamion() {
       </aside>
 
       <main className="flex-1 p-8 bg-gray-50">
+        <div className="max-w-5xl mx-auto mt-10 mb-8">
+  <div className="relative px-6">
+    {/* Ligne de progression */}
+    <div className="absolute top-4 left-0 w-full h-1 bg-gray-300 rounded">
+      <div
+        className="h-1 bg-[#1a5c97] rounded transition-all duration-500"
+        style={{
+          width: `${(100 * ["en_attente", "en_cours", "pret_a_livrer", "livree"].indexOf(camion?.statut || "")) / 3}%`,
+        }}
+      />
+    </div>
+
+    {/* Étapes cliquables */}
+    <div className="flex justify-between items-center relative z-10">
+      {["en_attente", "en_cours", "pret_a_livrer", "livree"].map((state, index) => {
+        const currentIndex = ["en_attente", "en_cours", "pret_a_livrer", "livree"].indexOf(camion?.statut || "");
+        const isCompleted = index < currentIndex;
+        const isActive = camion?.statut === state;
+     {/* ✅ Message d'erreur ici */}
+    {message && (
+      <div className="text-center mt-4">
+        <p className="text-red-600 font-semibold bg-red-50 border border-red-200 rounded px-4 py-2 inline-block">
+          {message}
+        </p>
+      </div>
+    )}
+        return (
+          <div key={state} className="flex flex-col items-center w-1/4 group">
+            <div
+              onClick={() => {
+  if (role !== "admin") return; // sécurité : seul un admin peut cliquer
+
+  // Aller de "en_attente" vers "en_cours"
+  if (state === "en_cours" && camion?.statut === "en_attente") {
+    setShowModal(true);
+  }
+
+  // Aller de "en_cours" vers "pret_a_livrer" SI tout est validé
+  else if (state === "pret_a_livrer" && camion?.statut === "en_cours") {
+    if (toutesValidees) {
+      setShowModal(true);
+    } else {
+      setMessage("❌ Vous devez valider toutes les prestations et livrer toutes les pièces avant de continuer.");
+    }
+  }
+
+  // Aller de "pret_a_livrer" vers "livree"
+  else if (state === "livree" && camion?.statut === "pret_a_livrer") {
+    handleStatusToLivree();
+  }
+
+  // Retour de "pret_a_livrer" à "en_cours" (clic sur étape précédente)
+  else if (state === "en_cours" && camion?.statut === "pret_a_livrer") {
+    setShowRetourModal(true);
+  }
+}}
+
+              title={
+                camion?.statut !== state && state !== "livree" && role !== "admin"
+                  ? "Réservé aux administrateurs"
+                  : camion?.statut === "en_cours" && !toutesValidees && state === "pret_a_livrer"
+                  ? "Validez toutes les tâches d'abord"
+                  : ""
+              }
+              className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-sm font-semibold transition cursor-pointer shadow-md
+                ${
+                  isCompleted
+                    ? "bg-green-100 text-green-700 border-green-300"
+                    : isActive
+                    ? "bg-[#1a5c97] text-white border-[#1a5c97]"
+                    : "bg-white text-gray-400 border-gray-300 hover:bg-gray-100"
+                }`}
+            >
+              {isCompleted ? (
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path
+                    fillRule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              ) : (
+                index + 1
+              )}
+            </div>
+            <span className="mt-2 text-sm font-medium text-gray-600 capitalize">
+              {state.replace("_", " ")}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+</div>
+
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-3xl font-bold text-[#1a5c97]">Numéro de Châssis : {chassis}</h2>
           <div className="flex items-center gap-3">
@@ -520,12 +617,24 @@ export default function EnCoursCamion() {
             ))}
           </div>
         )}
-       {camion && (
+     {camion && (
   <div className="bg-white p-6 rounded-lg shadow mb-6 grid grid-cols-2 gap-6">
+    {/* Bouton de modification visible seulement pour les admins */}
+    {role === "admin" && (
+      <div className="col-span-2 flex justify-end mb-4">
+        <button
+          onClick={() => navigate("/ajouter-camion", { state: { numero_chassis: camion.numero_chassis } })}
+          className="bg-[#e0f2fe] text-gray-700 px-3 py-1 rounded hover:bg-[#bae6fd] transition-colors duration-200 text-xs font-light focus:outline-none"
+          title="Modifier"
+        >
+          Éditer
+        </button>
+      </div>
+    )}
     <div>
       <strong>Immatriculation :</strong> {camion.immatriculation_etrangere}
     </div>
-     <div>
+    <div>
       <strong>Date de mise en circulation :</strong> {formatDateFr(camion.date_mise_en_circulation)}
     </div>
     <div>
@@ -539,7 +648,7 @@ export default function EnCoursCamion() {
     </div>
     {camion.date_statut_en_cours && (
       <div>
-       <strong>Début des interventions :</strong> {formatDateFr(camion.date_statut_en_cours)}
+        <strong>Début des interventions :</strong> {formatDateFr(camion.date_statut_en_cours)}
       </div>
     )}
     <div>
@@ -555,12 +664,15 @@ export default function EnCoursCamion() {
     </div>
     <div className="col-span-2">
       <strong>Inspection :</strong>{" "}
-      {camion.inspection_reception ? camion.inspection_reception : (
+      {camion.inspection_reception ? (
+        camion.inspection_reception
+      ) : (
         <span className="text-red-500">⚠️ Contrôle manquant</span>
       )}
     </div>
   </div>
 )}
+
 
         {photos.length > 0 && (
           <div className="bg-white p-6 rounded-lg shadow mb-6">
@@ -701,7 +813,7 @@ export default function EnCoursCamion() {
           </div>
         )}
 
-        {camion?.statut === "en_cours" && role === "admin" && (
+       {/*{camion?.statut === "en_cours" && role === "admin" && (
           <div className="flex justify-end gap-6">
             <button
               onClick={() => setShowModal(true)}
@@ -711,7 +823,7 @@ export default function EnCoursCamion() {
               Passer à l'état suivant
             </button>
           </div>
-        )}
+        )}*
 
         {camion?.statut === "pret_a_livrer" && role === "admin" && (
           <div className="flex justify-end gap-6">
@@ -755,7 +867,7 @@ export default function EnCoursCamion() {
               )}
             </button>
           </div>
-        )}
+        )}*/ }
 
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

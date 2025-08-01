@@ -1,8 +1,16 @@
-import { useState, useRef } from "react";
+import { useState, useRef , useEffect } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "../config";
 import { useNavigate, useLocation } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
+
+
+const statutColor = {
+  en_attente: "bg-[#fef2f2] text-[#b91c1c] border border-[#fca5a5]",       // rouge pâle élégant
+  en_cours: "bg-[#fff7ed] text-[#c2410c] border border-[#fdba74]",        // orange subtil et pro
+  pret_a_livrer: "bg-[#eef2ff] text-[#4338ca] border border-[#a5b4fc]",   // vert clair pastel
+  livree: "bg-[#ecfdf5] text-[#047857] border border-[#6ee7b7]",          // bleu doux et lisible
+};
 
 interface CamionData {
   numero_chassis: string;
@@ -47,6 +55,9 @@ export default function AjouterCamion() {
   const [loadingDelete, setLoadingDelete] = useState(false);
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [initialNumero, setInitialNumero] = useState<string | null>(null);
+  const [modeEdition, setModeEdition] = useState(false);
+  
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -63,7 +74,13 @@ export default function AjouterCamion() {
       }));
     }
   };
-
+  
+useEffect(() => {
+  if (location.state?.numero_chassis) {
+    setSearchNumero(location.state.numero_chassis);
+    handleSearchAuto(location.state.numero_chassis);
+  }
+}, [location.state]);
   const handleSearch = async () => {
     setLoadingSearch(true);
     try {
@@ -87,6 +104,30 @@ export default function AjouterCamion() {
       setLoadingSearch(false);
     }
   };
+const handleSearchAuto = async (numero: string) => {
+  setLoadingSearch(true);
+  try {
+    const res = await axios.get(`${API_BASE_URL}/api/camions/${numero}/edition`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (res.data) {
+      setFormData(res.data);
+      setInitialNumero(res.data.numero_chassis);
+      setLocked(false);
+      setModeEdition(true); // 👈 Active le mode édition
+      toast.success("Camion chargé pour édition");
+    } else {
+      toast.error("Camion introuvable");
+      setLocked(true);
+    }
+  } catch (err) {
+    toast.error("Erreur lors du chargement");
+    setLocked(true);
+  } finally {
+    setLoadingSearch(false);
+  }
+};
 
   const checkNumeroExist = async (e: React.FocusEvent<HTMLInputElement>) => {
     const value = e.target.value.trim();
@@ -129,25 +170,31 @@ export default function AjouterCamion() {
   };
 
   const handleSubmit = async () => {
-    if (!validateForm()) return;
-    setLoadingSubmit(true);
-    try {
-      const submitData = { ...formData };
-      delete submitData.statut; // Remove statut if backend doesn't expect it
-      console.log("Submit Payload:", submitData); // Debug payload
-      await axios.post(`${API_BASE_URL}/api/camions/add`, submitData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      await uploadPhotos(formData.numero_chassis);
-      toast.success("Camion ajouté");
-      resetForm();
-    } catch (err: any) {
-      console.error("Submit Error:", err.response?.data || err.message);
-      toast.error(err.response?.data?.error?.includes("duplicate key") ? " Numéro déjà existant" : " Erreur d'envoi");
-    } finally {
-      setLoadingSubmit(false);
-    }
-  };
+  if (!validateForm()) return;
+  setLoadingSubmit(true);
+  try {
+    const submitData = { ...formData };
+    delete submitData.statut; // Remove statut if backend doesn't expect it
+    await axios.post(`${API_BASE_URL}/api/camions/add`, submitData, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    await uploadPhotos(formData.numero_chassis);
+
+    toast.success("Camion ajouté, redirection...");
+    navigate(`/camions/${formData.numero_chassis}`);  // ✅ redirection vers fiche détail
+  } catch (err: any) {
+    console.error("Submit Error:", err.response?.data || err.message);
+    toast.error(
+      err.response?.data?.error?.includes("duplicate key")
+        ? " Numéro déjà existant"
+        : " Erreur d'envoi"
+    );
+  } finally {
+    setLoadingSubmit(false);
+  }
+};
+
 
   const handleUpdate = async () => {
     if (!validateForm() || !initialNumero) {
@@ -282,217 +329,203 @@ export default function AjouterCamion() {
   };
 
   return (
-    <div className="flex min-h-screen">
-      <aside className="w-64 bg-white shadow-lg p-4 flex flex-col justify-between">
-        <div>
-          <img src="/logo2.png" alt="Bonne Route Auto" className="h-24 mb-4" />
-          <nav className="space-y-3 text-base">
-            {[
-              { icon: "", label: "Dashboard", path: "/dashboard" },
-              { icon: "", label: "Ajouter Camions", path: "/ajouter-camion" },
-              { icon: "", label: "Utilisateurs", path: "/ListeUtilisateurs" },
-              
-            ].map((item) => (
-              <button
-                key={item.label}
-                onClick={() => navigate(item.path)}
-                className={`block w-full text-left px-3 py-2 hover:bg-gray-100 ${
-                  location.pathname === item.path ? "bg-blue-50 text-blue-600 font-semibold" : ""
-                }`}
-              >
-                <span className="mr-3">{item.icon}</span> {item.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-        <button
-          onClick={() => navigate("/login")}
-          className="text-base text-red-600 hover:underline flex items-center gap-2"
-        >
-          <span></span> Se déconnecter
-        </button>
-      </aside>
-
-      <main className="flex-1 p-8 bg-gray-50">
-        <Toaster position="top-right" />
-        <div className="max-w-5xl mx-auto">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-3xl font-bold text-gray-500"> {formData.numero_chassis || "N/A"}</h2>
-            <div className="flex items-center gap-3">
-              <span
-                className={`text-sm px-4 py-1 rounded-full ${
-                  statutColor[formData.statut as keyof typeof statutColor] || "bg-gray-100"
-                }`}
-              >
-                {formData.statut?.replace("_", " ") || "Non défini"}
-              </span>
-              <button className="text-gray-500 hover:text-gray-700" onClick={handleSearch}></button>
-            </div>
-          </div>
-
-          <h2 className="text-3xl font-bold text-[#1a5c97] mb-6 text-center">Enregistrer un camion</h2>
-
-          <div className="flex items-center mb-6 space-x-4">
-            <input
-              type="text"
-              placeholder="Rechercher un N° de châssis existant"
-              value={searchNumero}
-              onChange={(e) => setSearchNumero(e.target.value)}
-              className="border px-4 py-2 rounded w-full"
-            />
+  <div className="flex min-h-screen">
+    <aside className="w-64 bg-white shadow-lg p-4 flex flex-col justify-between">
+      <div>
+        <img src="/logo2.png" alt="Bonne Route Auto" className="h-24 mb-4" />
+        <nav className="space-y-3 text-base">
+          {[
+            { icon: "", label: "Dashboard", path: "/dashboard" },
+            { icon: "", label: "Ajouter Camions", path: "/ajouter-camion" },
+            { icon: "", label: "Utilisateurs", path: "/ListeUtilisateurs" },
+          ].map((item) => (
             <button
-              onClick={handleSearch}
-              disabled={loadingSearch}
+              key={item.label}
+              onClick={() => navigate(item.path)}
+              className={`block w-full text-left px-3 py-2 hover:bg-gray-100 ${
+                location.pathname === item.path ? "bg-blue-50 text-blue-600 font-semibold" : ""
+              }`}
+            >
+              <span className="mr-3">{item.icon}</span> {item.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+      <button
+        onClick={() => navigate("/login")}
+        className="text-base text-red-600 hover:underline flex items-center gap-2"
+      >
+        <span></span> Se déconnecter
+      </button>
+    </aside>
+    <main className="flex-1 p-8 bg-gray-50">
+      <Toaster position="top-right" />
+      <div className="max-w-5xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-3xl font-bold text-gray-500">{formData.numero_chassis || "N/A"}</h2>
+          <div className="flex items-center gap-3">
+            <span
+              className={`text-sm px-4 py-1 rounded-full ${
+                statutColor[formData.statut as keyof typeof statutColor] || "bg-gray-100"
+              }`}
+            >
+              {formData.statut?.replace("_", " ") || "Non défini"}
+            </span>
+            <button className="text-gray-500 hover:text-gray-700" onClick={handleSearch}></button>
+          </div>
+        </div>
+        <h2 className="text-3xl font-bold text-[#1a5c97] mb-6 text-center">Enregistrer un camion</h2>
+        
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-1"> N° de châssis</label>
+          <input
+            type="text"
+            placeholder="Ex: XLR123456789"
+            value={formData.numero_chassis}
+            name="numero_chassis"
+            onChange={handleChange}
+            onBlur={checkNumeroExist}
+            className="border px-4 py-2 rounded w-full"
+            disabled={loadingSearch || loadingSubmit || loadingUpdate}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-6">
+          {Object.entries(formData).map(([key, value]) =>
+            key !== "numero_chassis" && key !== "statut" && (
+              <div key={key} className="col-span-1">
+                <label className="block mb-1 text-sm font-medium capitalize">
+                  {key.replace(/_/g, " ")}
+                </label>
+                {key === "inspection_reception" || key === "memos" ? (
+                  <textarea
+                    name={key}
+                    value={value ?? ""}
+                    onChange={handleChange}
+                    disabled={locked || loadingSearch || loadingSubmit || loadingUpdate}
+                    className="w-full border rounded px-4 py-2"
+                  />
+                ) : (
+                  <input
+                    name={key}
+                    value={value ?? ""}
+                    onChange={handleChange}
+                    disabled={locked || loadingSearch || loadingSubmit || loadingUpdate}
+                    type={
+                      key === "kilometrage"
+                        ? "number"
+                        : key.includes("date")
+                        ? "date"
+                        : "text"
+                    }
+                    className="w-full border rounded px-4 py-2"
+                    min={key === "kilometrage" ? "0" : undefined}
+                  />
+                )}
+              </div>
+            )
+          )}
+        </div>
+        <div className="mt-6">
+          <label className="block mb-2 text-sm font-medium text-gray-700">Uploader des photos</label>
+          <div className="flex gap-4 items-center">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              type="button"
+              disabled={files.length >= MAX_FILES || loadingSubmit || loadingUpdate}
               className="bg-[#1a5c97] hover:bg-[#14497a] text-white px-4 py-2 rounded disabled:bg-gray-400"
             >
-              {loadingSearch ? "Recherche..." : "Rechercher"}
+              + 
             </button>
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nouveau N° de châssis</label>
             <input
-              type="text"
-              placeholder="Ex: XLR123456789"
-              value={formData.numero_chassis}
-              name="numero_chassis"
-              onChange={handleChange}
-              onBlur={checkNumeroExist}
-              className="border px-4 py-2 rounded w-full"
-              disabled={loadingSearch || loadingSubmit || loadingUpdate}
+              type="file"
+              multiple
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              className="hidden"
+              disabled={files.length >= MAX_FILES || loadingSubmit || loadingUpdate}
             />
           </div>
-
-          <div className="grid grid-cols-2 gap-6">
-            {Object.entries(formData).map(([key, value]) => (
-              key !== "numero_chassis" && key !== "statut" && (
-                <div key={key} className="col-span-1">
-                  <label className="block mb-1 text-sm font-medium capitalize">
-                    {key.replace(/_/g, " ")}
-                  </label>
-                  {key === "inspection_reception" || key === "memos" ? (
-                    <textarea
-                      name={key}
-                      value={value ?? ""}
-                      onChange={handleChange}
-                      disabled={locked || loadingSearch || loadingSubmit || loadingUpdate}
-                      className="w-full border rounded px-4 py-2"
-                    />
-                  ) : (
-                    <input
-                      name={key}
-                      value={value ?? ""}
-                      onChange={handleChange}
-                      disabled={locked || loadingSearch || loadingSubmit || loadingUpdate}
-                      type={
-                        key === "kilometrage" ? "number"
-                          : key.includes("date") ? "date"
-                          : "text"
-                      }
-                      className="w-full border rounded px-4 py-2"
-                      min={key === "kilometrage" ? "0" : undefined}
-                    />
-                  )}
+          {previews.length > 0 && (
+            <div className="mt-4 grid grid-cols-4 gap-2">
+              {previews.map((src, index) => (
+                <div key={index} className="relative">
+                  <img
+                    src={src}
+                    alt={`preview-${index}`}
+                    className="h-24 w-24 object-cover border rounded shadow"
+                  />
+                  <button
+                    onClick={() => removeFile(index)}
+                    className="absolute top-0 right-0 bg-red-600 text-white text-xs px-1 rounded-full"
+                  >
+                    ✕
+                  </button>
                 </div>
-              )
-            ))}
-          </div>
-
-          <div className="mt-6">
-            <label className="block mb-2 text-sm font-medium text-gray-700">Uploader des photos</label>
-            <div className="flex gap-4 items-center">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                type="button"
-                disabled={files.length >= MAX_FILES || loadingSubmit || loadingUpdate}
-                className="bg-[#1a5c97] hover:bg-[#14497a] text-white px-4 py-2 rounded disabled:bg-gray-400"
-              >
-                + Ajouter
-              </button>
-              <input
-                type="file"
-                multiple
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                className="hidden"
-                disabled={files.length >= MAX_FILES || loadingSubmit || loadingUpdate}
-              />
+              ))}
             </div>
-
-            {previews.length > 0 && (
-              <div className="mt-4 grid grid-cols-4 gap-2">
-                {previews.map((src, index) => (
-                  <div key={index} className="relative">
-                    <img
-                      src={src}
-                      alt={`preview-${index}`}
-                      className="h-24 w-24 object-cover border rounded shadow"
-                    />
-                    <button
-                      onClick={() => removeFile(index)}
-                      className="absolute top-0 right-0 bg-red-600 text-white text-xs px-1 rounded-full"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
+          )}
+          <div className="flex justify-end space-x-4 mt-6">
+            {!modeEdition && (
+              <button
+                onClick={handleSubmit}
+                disabled={locked || loadingSubmit || !formData.numero_chassis}
+                className="bg-[#1a5c97] hover:bg-[#14497a] text-white px-4 py-2 rounded-lg shadow-md disabled:bg-gray-400"
+              >
+                {loadingSubmit ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 mr-2 inline-block" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8h8a8 8 0 01-8 8 8 8 0 01-8-8z" />
+                    </svg>
+                    Ajout...
+                  </>
+                ) : (
+                  "Ajouter"
+                )}
+              </button>
+            )}
+            {modeEdition && (
+              <div className="flex space-x-4">
+                <button
+  onClick={handleUpdate}
+  disabled={locked || loadingUpdate}
+  className="bg-[#1a5c97] hover:bg-[#14497a] text-white px-4 py-2 rounded-lg shadow-md disabled:bg-gray-400"
+>
+  {loadingUpdate ? (
+    <>
+      <svg className="animate-spin h-5 w-5 mr-2 inline-block" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8h8a8 8 0 01-8 8 8 8 0 01-8-8z" />
+      </svg>
+      Mise à jour...
+    </>
+  ) : (
+    "Modifier"
+  )}
+</button>
+{formData.statut === "en_attente" && (
+<button
+  onClick={handleDelete}
+  disabled={locked || loadingDelete}
+    className="bg-[#d1d5db] text-gray-800 px-6 py-3 rounded-lg shadow-md hover:bg-[#e5e7eb] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+>
+  {loadingDelete ? (
+    <>
+      <svg className="animate-spin h-5 w-5 mr-2 inline-block" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8h8a8 8 0 01-8 8 8 8 0 01-8-8z" />
+      </svg>
+      Suppression...
+    </>
+  ) : (
+    "Supprimer"
+  )}
+</button> )}
               </div>
             )}
           </div>
-
-          <div className="flex space-x-4 mt-6 justify-end">
-            <button
-              onClick={handleSubmit}
-              disabled={locked || loadingSubmit || !formData.numero_chassis}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow flex items-center gap-2 disabled:opacity-50"
-            >
-              {loadingSubmit ? (
-                <>
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8h8a8 8 0 01-8 8 8 8 0 01-8-8z" />
-                  </svg> Ajout...
-                </>
-              ) : ("Ajouter")}
-            </button>
-            <button
-              onClick={handleUpdate}
-              disabled={locked || loadingUpdate || !initialNumero}
-              className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded shadow flex items-center gap-2 disabled:opacity-50"
-            >
-              {loadingUpdate ? (
-                <>
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8h8a8 8 0 01-8 8 8 8 0 01-8-8z" />
-                  </svg> Mise à jour...
-                </>
-              ) : ("Modifier")}
-            </button>
-            <button
-              onClick={handleDelete}
-              disabled={locked || loadingDelete || !formData.numero_chassis}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded shadow flex items-center gap-2 disabled:opacity-50"
-            >
-              {loadingDelete ? (
-                <>
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8h8a8 8 0 01-8 8 8 8 0 01-8-8z" />
-                  </svg> Suppression...
-                </>
-              ) : ("Supprimer")}
-            </button>
-          </div>
         </div>
-      </main>
-    </div>
-  );
-}
-
-const statutColor = {
-  en_attente: "bg-[#fef2f2] text-[#b91c1c] border border-[#fca5a5]",       // rouge pâle élégant
-  en_cours: "bg-[#fff7ed] text-[#c2410c] border border-[#fdba74]",        // orange subtil et pro
-  pret_a_livrer: "bg-[#ecfdf5] text-[#047857] border border-[#6ee7b7]",   // vert clair pastel
-  livree: "bg-[#eef2ff] text-[#4338ca] border border-[#a5b4fc]",          // bleu doux et lisible
-};
+      </div>
+    </main>
+  </div>
+); }
