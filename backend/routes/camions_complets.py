@@ -30,17 +30,37 @@ def token_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# -----------------------------
-#  GET : Liste camions + alertes calculées
-# -----------------------------
 @camions_complets_bp.route("/liste_complets", methods=["GET"])
 @token_required
 def get_all_camions():
     try:
-        res = supabase.table("camions").select("*").execute()
+        # Lire les filtres depuis la query string
+        statut = request.args.get("statut")
+        alerte = request.args.get("alertes")  # "true" ou "false"
+        sort = request.args.get("sort", "desc")  # "asc" ou "desc"
+        page = int(request.args.get("page", 1))
+        limit = int(request.args.get("limit", 10))
+        offset = (page - 1) * limit
+
+        # Requête initiale
+        query = supabase.table("camions").select("*")
+
+        # Filtrage par statut si fourni
+        if statut:
+            query = query.eq("statut", statut)
+
+        # Tri
+        if sort == "asc":
+            query = query.order("date_creation", desc=False)
+        else:
+            query = query.order("date_creation", desc=True)
+
+        # Récupération des données
+        res = query.range(offset, offset + limit - 1).execute()
+
+        # Traitement des alertes
         now = datetime.utcnow()
         result = []
-
         for camion in res.data:
             statut = camion.get("statut")
             retour = camion.get("retour_arriere", False)
@@ -57,6 +77,12 @@ def get_all_camions():
 
             camion["a_des_alertes"] = alerte_active
             result.append(camion)
+
+        # Si filtre alerte côté client → appliquer maintenant
+        if alerte == "true":
+            result = [c for c in result if c.get("a_des_alertes") is True]
+        elif alerte == "false":
+            result = [c for c in result if not c.get("a_des_alertes")]
 
         return jsonify(result), 200
 
