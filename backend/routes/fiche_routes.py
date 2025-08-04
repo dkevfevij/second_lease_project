@@ -109,7 +109,8 @@ def changer_statut_camion(chassis):
     try:
         payload = request.get_json()
         nouveau_statut = payload.get("nouveau_statut")
-        statuts_valides = ["en_attente", "en_cours", "pret_a_livrer", "livree"]
+        statuts_valides = ["en_attente", "en_controle", "en_cours", "pret_a_livrer", "livree"]
+
 
         if nouveau_statut not in statuts_valides:
             return jsonify({"error": f"Statut invalide. Choisissez parmi : {statuts_valides}"}), 400
