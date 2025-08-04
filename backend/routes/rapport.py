@@ -1,4 +1,4 @@
-from flask import Blueprint, request, send_file, jsonify, render_template, make_response
+from flask import Blueprint, request, jsonify, render_template, make_response
 from datetime import datetime
 from config.supabase_client import supabase
 import jwt
@@ -21,17 +21,11 @@ def format_date(date_input):
     try:
         if not date_input:
             return "—"
-        
         if isinstance(date_input, datetime):
             return date_input.strftime("%d/%m/%Y")
-        
         if isinstance(date_input, str):
-            # Si c'est une string ISO (ex: '2025-06-30')
             return datetime.fromisoformat(date_input).strftime("%d/%m/%Y")
-        
-        # Si c’est un objet date (ex : type Date de SQLAlchemy ou Supabase)
         return date_input.strftime("%d/%m/%Y")
-    
     except Exception as e:
         print("❌ Erreur format_date :", e)
         return "—"
@@ -79,13 +73,16 @@ def generate_pdf(chassis):
         formatted_mec = format_date(camion.get("date_mise_en_circulation"))
         formatted_livraison = format_date(camion.get("date_livraison"))
 
-
         prestations = supabase.table("prestations").select("*").eq("camion_id", camion_id).execute().data or []
         pieces = supabase.table("pieces").select("*").eq("camion_id", camion_id).execute().data or []
 
+        # ✅ Rassembler les références de fiches d'intervention
+        fiche_refs_prestations = {p["fiche_reference"] for p in prestations if p.get("fiche_reference")}
+        fiche_refs_pieces = {p["fiche_reference"] for p in pieces if p.get("fiche_reference")}
+        fiches = sorted(fiche_refs_prestations.union(fiche_refs_pieces))
+
         # 🔁 Récupérer les contrôles périodiques si applicable
         controles = []
-        
         if camion.get("statut") in ["pret_a_livrer", "livree"]:
             controles_res = supabase.table("controles").select("*").eq("camion_id", camion_id).eq("is_reminder", True).execute()
             controles = controles_res.data or []
@@ -99,23 +96,21 @@ def generate_pdf(chassis):
         second_logo_path = os.path.join(os.getcwd(), 'static', 'logo_second_lease.png').replace('\\', '/')
 
         html = render_template(
-    "rapport.html",
-    camion=camion,
-    prestations=prestations,
-    pieces=pieces,
-    now=now,
-    date_creation=formatted_creation,
-    date_statut_en_cours=formatted_en_cours,
-    date_mise_en_circulation=formatted_mec,
-    date_livraison=formatted_livraison,
-    controles=controles,
-    logo=logo_path,
-    second_logo=second_logo_path,
-    statut_formate=format_statut_fr(camion.get("statut"))  # ✅ ligne ajoutée
-)
-
-
-
+            "rapport.html",
+            camion=camion,
+            prestations=prestations,
+            pieces=pieces,
+            now=now,
+            date_creation=formatted_creation,
+            date_statut_en_cours=formatted_en_cours,
+            date_mise_en_circulation=formatted_mec,
+            date_livraison=formatted_livraison,
+            controles=controles,
+            fiches=fiches,
+            logo=logo_path,
+            second_logo=second_logo_path,
+            statut_formate=format_statut_fr(camion.get("statut"))
+        )
 
         options = {
             'margin-top': '1cm',

@@ -159,6 +159,28 @@
       <p><strong>Client :</strong> {{ camion.client or 'Non renseigné' }}</p>
     </div>
   </div>
+  <!-- Fiches d'intervention concernées -->
+  {% if fiches and fiches|length > 0 %}
+  <div class="section">
+    <h4 style="color: #2E86C1; border-left: 5px solid #B03A2E; padding-left: 8px;">
+      Fiches d'intervention concernées
+    </h4>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 100%;">Référence de fiche</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ref in fiches %}
+        <tr>
+          <td>{{ ref }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
 
   <!-- Prestations -->
   <div class="section">
