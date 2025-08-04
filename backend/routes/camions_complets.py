@@ -45,7 +45,7 @@ def get_all_camions():
         # Requête initiale
         query = supabase.table("camions").select("*")
 
-        # Filtrage par statut si fourni
+        # Filtrage par statut
         if statut:
             query = query.eq("statut", statut)
 
@@ -58,9 +58,9 @@ def get_all_camions():
         # Récupération des données
         res = query.range(offset, offset + limit - 1).execute()
 
-        # Traitement des alertes
         now = datetime.utcnow()
         result = []
+
         for camion in res.data:
             statut = camion.get("statut")
             retour = camion.get("retour_arriere", False)
@@ -75,23 +75,25 @@ def get_all_camions():
                 except:
                     pass
 
-            camion["a_des_alertes"] = alerte_active
+            # ✅ On n’écrase plus la valeur stockée en base
+            camion["alerte_dyn"] = alerte_active  # ← champ ajouté dynamiquement
             result.append(camion)
 
-        # Si filtre alerte côté client → appliquer maintenant
+        # Si filtre sur les alertes activé côté client (basé sur a_des_alertes uniquement)
         if alerte == "true":
             result = [c for c in result if c.get("a_des_alertes") is True]
         elif alerte == "false":
             result = [c for c in result if not c.get("a_des_alertes")]
+
+        # Debug console serveur
         print("🚨 DEBUG CAMIONS AVEC ALERTES")
         for camion in result:
-            print(camion["numero_chassis"], camion.get("a_des_alertes"))
+            print(camion["numero_chassis"], "base:", camion.get("a_des_alertes"), "dyn:", camion.get("alerte_dyn"))
 
         return jsonify(result), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 # -----------------------------
 #  GET : Fiche complète d’un camion
