@@ -83,6 +83,9 @@ def get_all_camions():
             result = [c for c in result if c.get("a_des_alertes") is True]
         elif alerte == "false":
             result = [c for c in result if not c.get("a_des_alertes")]
+        print("🚨 DEBUG CAMIONS AVEC ALERTES")
+        for camion in result:
+            print(camion["numero_chassis"], camion.get("a_des_alertes"))
 
         return jsonify(result), 200
 
