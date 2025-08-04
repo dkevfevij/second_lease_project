@@ -154,7 +154,8 @@
     {% if camion.statut == "livree" %}
       <p><strong>Camion livré le :</strong> {{ date_livraison }}</p>
         {% endif %}
-      <p><strong>Statut actuel :</strong> <span style="color: #B03A2E;">{{ camion.statut.replace('_', ' ') }}</span></p>
+      <p><strong>Statut actuel :</strong> <span style="color: #B03A2E;">{{ statut_formate }}</span></p>
+
       <p><strong>Client :</strong> {{ camion.client or 'Non renseigné' }}</p>
     </div>
   </div>

@@ -36,6 +36,14 @@ def format_date(date_input):
         print("❌ Erreur format_date :", e)
         return "—"
 
+def format_statut_fr(statut):
+    mapping = {
+        "en_attente": "En attente",
+        "en_cours": "En cours",
+        "pret_a_livrer": "Prêt à livrer",
+        "livree": "Livré"
+    }
+    return mapping.get(statut, statut)
 
 # 🔐 Décorateur d'authentification
 def token_required(f):
@@ -91,18 +99,19 @@ def generate_pdf(chassis):
         second_logo_path = os.path.join(os.getcwd(), 'static', 'logo_second_lease.png').replace('\\', '/')
 
         html = render_template(
-                "rapport.html",
-                camion=camion,
-                prestations=prestations,
-                pieces=pieces,
-                now=now,
-                date_creation=formatted_creation,
-                date_statut_en_cours=formatted_en_cours,
-                date_mise_en_circulation=formatted_mec,
-                date_livraison=formatted_livraison,  # 🆕
-                controles=controles,
-                logo=logo_path,
-                second_logo=second_logo_path
+    "rapport.html",
+    camion=camion,
+    prestations=prestations,
+    pieces=pieces,
+    now=now,
+    date_creation=formatted_creation,
+    date_statut_en_cours=formatted_en_cours,
+    date_mise_en_circulation=formatted_mec,
+    date_livraison=formatted_livraison,
+    controles=controles,
+    logo=logo_path,
+    second_logo=second_logo_path,
+    statut_formate=format_statut_fr(camion.get("statut"))  # ✅ ligne ajoutée
 )
 
 
