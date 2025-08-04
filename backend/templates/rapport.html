@@ -240,19 +240,18 @@
           <th>Date du contrôle</th>
           <th>Résultat</th>
           <th class="center">Validé</th>
-          <th class="center">Nb d'exécutions</th>
           <th>Commentaire</th>
         </tr>
       </thead>
       <tbody>
         {% for ctrl in controles %}
-        <tr style="background-color: {{ '#fff5f5' if not ctrl.valide else '#f9fdf9' }};">
-          <td>{{ ctrl.type.replace('_', ' ') }}</td>
-          <td>{{ ctrl.formatted_date }}</td>
-          <td>{{ ctrl.resultat or "—" }}</td>
-          <td class="center {{ 'yes' if ctrl.valide else 'no' }}">{{ 'Oui' if ctrl.valide else 'Non' }}</td>
-          <td>{{ ctrl.commentaire or "—" }}</td>
-        </tr>
+        <tr>
+            <td>{{ ctrl.type.replace('_', ' ') }}</td>
+            <td>{{ ctrl.formatted_date }}</td>
+            <td>{{ ctrl.resultat or "—" }}</td>
+            <td class="center {{ 'yes' if ctrl.valide else 'no' }}">{{ 'Oui' if ctrl.valide else 'Non' }}</td>
+            <td>{{ ctrl.commentaire or "—" }}</td>
+          </tr>
         {% endfor %}
       </tbody>
     </table>
