@@ -577,7 +577,7 @@ export default function EnCoursCamion() {
 
           {camion && (
             <div className="bg-white p-6 rounded-lg shadow mb-6 grid grid-cols-2 gap-6">
-              {role === "admin" && (
+              {role === "admin" && camion?.statut !== "livree" &&(
                 <div className="col-span-2 flex justify-end mb-4">
                   <button
                     onClick={() => navigate("/ajouter-camion", { state: { numero_chassis: camion.numero_chassis } })}

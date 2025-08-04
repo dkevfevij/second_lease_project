@@ -188,64 +188,71 @@ const formatStatut = (statut: string) => {
                 </span>
               </div>
               <div className="flex flex-wrap gap-2 mb-3">
-                <button
-                  onClick={() => toggleStatutFiltre("en_attente")}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    statutFiltre === "en_attente" ? "bg-gray-200 text-gray-900" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  En attente
-                </button>
-                <button
-                  onClick={() => toggleStatutFiltre("en_cours")}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    statutFiltre === "en_cours" ? "bg-gray-200 text-gray-900" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  En cours
-                </button>
-                <button
-                  onClick={() => toggleStatutFiltre("pret_a_livrer")}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    statutFiltre === "pret_a_livrer" ? "bg-gray-200 text-gray-900" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  Prêt à livrer
-                </button>
-                <button
-                  onClick={() => toggleStatutFiltre("livree")}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    statutFiltre === "livré" ? "bg-gray-200 text-gray-900" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  Livré
-                </button>
-                <button
-                  onClick={() => toggleAlerteFiltre("true")}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    alerteFiltre === "true" ? "bg-gray-200 text-gray-900" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  Avec alerte
-                </button>
-                <button
-                  onClick={() => toggleAlerteFiltre("false")}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    alerteFiltre === "false" ? "bg-gray-200 text-gray-900" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  Sans alerte
-                </button>
-                <button
-                  onClick={() => setSortOrder(sortOrder === "desc" ? "asc" : "desc")}
-                  className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center gap-1"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4h18M3 10h12M3 16h6" />
-                  </svg>
-                  {sortOrder === "desc" ? "Date ↓" : "Date ↑"}
-                </button>
-              </div>
+  <button
+    onClick={() => toggleStatutFiltre("en_attente")}
+    disabled={statutFiltre === "en_attente"}
+    className={`px-3 py-1 rounded-full text-xs font-semibold ${
+      statutFiltre === "en_attente" ? "bg-gray-200 text-gray-900" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+    }`}
+  >
+    En attente
+  </button>
+  <button
+    onClick={() => toggleStatutFiltre("en_cours")}
+    disabled={statutFiltre === "en_cours"}
+    className={`px-3 py-1 rounded-full text-xs font-semibold ${
+      statutFiltre === "en_cours" ? "bg-gray-200 text-gray-900" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+    }`}
+  >
+    En cours
+  </button>
+  <button
+    onClick={() => toggleStatutFiltre("pret_a_livrer")}
+    disabled={statutFiltre === "pret_a_livrer"}
+    className={`px-3 py-1 rounded-full text-xs font-semibold ${
+      statutFiltre === "pret_a_livrer" ? "bg-gray-200 text-gray-900" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+    }`}
+  >
+    Prêt à livrer
+  </button>
+  <button
+    onClick={() => toggleStatutFiltre("livree")}
+    disabled={statutFiltre === "livree"}
+    className={`px-3 py-1 rounded-full text-xs font-semibold ${
+      statutFiltre === "livree" ? "bg-gray-200 text-gray-900" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+    }`}
+  >
+    Livré
+  </button>
+  <button
+    onClick={() => toggleAlerteFiltre("true")}
+    disabled={alerteFiltre === "true"}
+    className={`px-3 py-1 rounded-full text-xs font-semibold ${
+      alerteFiltre === "true" ? "bg-gray-200 text-gray-900" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+    }`}
+  >
+    Avec alerte
+  </button>
+  <button
+    onClick={() => toggleAlerteFiltre("false")}
+    disabled={alerteFiltre === "false"}
+    className={`px-3 py-1 rounded-full text-xs font-semibold ${
+      alerteFiltre === "false" ? "bg-gray-200 text-gray-900" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+    }`}
+  >
+    Sans alerte
+  </button>
+  <button
+    onClick={() => setSortOrder(sortOrder === "desc" ? "asc" : "desc")}
+    className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center gap-1"
+  >
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4h18M3 10h12M3 16h6" />
+    </svg>
+    {sortOrder === "desc" ? "Date ↓" : "Date ↑"}
+  </button>
+</div>
+
               <div className="flex flex-wrap gap-2 mb-3">
                 {statutFiltre && (
                   <span className={`px-3 py-1 rounded-full text-xs font-semibold ${badgeColor(statutFiltre)} flex items-center gap-1`}>
@@ -286,44 +293,53 @@ const formatStatut = (statut: string) => {
                   <thead>
                     <tr className="bg-[#e6eef5] text-[#1a5c97]">
                       <th className="px-3 py-1.5 text-left font-semibold">Numéro de châssis</th>
+                      <th className="px-3 py-1.5 text-left font-semibold">Date création</th>
                       <th className="px-3 py-1.5 text-left font-semibold">Statut</th>
                       <th className="px-3 py-1.5 text-left font-semibold">Alerte</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {paginatedCamions.map((c, i) => (
-                      <tr
-                        key={c.numero_chassis}
-                        className={`cursor-pointer ${i % 2 === 0 ? "bg-white" : "bg-blue-50"} hover:bg-gray-100`}
-                        onClick={() => navigate(`/camions/${c.numero_chassis}`)}
-                      >
-                        <td className="px-3 py-1.5">{c.numero_chassis}</td>
-                        <td className="px-3 py-1.5">
-                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${badgeColor(c.statut)}`}>
-                            {formatStatut(c.statut) || "Inconnu"}
-                          </span>
-                        </td>
-                        <td className="px-3 py-1.5 relative group">
-                          <span className="text-lg">
-  {c.alerte_dyn ? (
-    <span className="text-red-600 blink" title="Alerte dynamique (retard)">
-      ⚠️
-    </span>
-  ) : c.a_des_alertes ? (
-    <span className="text-yellow-500" title="Alerte manuelle">
-      ⚠️
-    </span>
-  ) : (
-    <span className="text-green-600" title="Aucune alerte">
-      ✔️
-    </span>
-  )}
-</span>
+                 <tbody>
+  {paginatedCamions.map((c, i) => (
+    <tr
+      key={c.numero_chassis}
+      className={`cursor-pointer ${i % 2 === 0 ? "bg-white" : "bg-blue-50"} hover:bg-gray-100`}
+      onClick={() => navigate(`/camions/${c.numero_chassis}`)}
+    >
+      <td className="px-3 py-1.5">{c.numero_chassis}</td>
 
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
+      <td className="px-3 py-1.5">
+        {c.date_creation
+          ? new Date(c.date_creation).toLocaleDateString("fr-FR")
+          : "—"}
+      </td>
+
+      <td className="px-3 py-1.5">
+        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${badgeColor(c.statut)}`}>
+          {formatStatut(c.statut) || "Inconnu"}
+        </span>
+      </td>
+
+      <td className="px-3 py-1.5 relative group">
+        <span className="text-lg">
+          {c.alerte_dyn ? (
+            <span className="text-red-600 blink" title="Alerte dynamique (retard)">
+              ⚠️
+            </span>
+          ) : c.a_des_alertes ? (
+            <span className="text-yellow-500" title="Alerte manuelle">
+              ⚠️
+            </span>
+          ) : (
+            <span className="text-green-600" title="Aucune alerte">
+              ✔️
+            </span>
+          )}
+        </span>
+      </td>
+    </tr>
+  ))}
+</tbody>
+
                 </table>
               </div>
               <div className="flex justify-between items-center mt-3">
