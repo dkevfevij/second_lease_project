@@ -251,7 +251,6 @@
           <td>{{ ctrl.formatted_date }}</td>
           <td>{{ ctrl.resultat or "—" }}</td>
           <td class="center {{ 'yes' if ctrl.valide else 'no' }}">{{ 'Oui' if ctrl.valide else 'Non' }}</td>
-          <td class="center">{{ ctrl.count or 1 }}</td>
           <td>{{ ctrl.commentaire or "—" }}</td>
         </tr>
         {% endfor %}
