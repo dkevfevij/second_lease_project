@@ -7,6 +7,7 @@ interface Camion {
   numero_chassis: string;
   statut: string;
   a_des_alertes: boolean;
+  alerte_dyn?: boolean; 
   date_creation?: string;
 }
 
@@ -35,8 +36,22 @@ export default function Dashboard() {
   useEffect(() => {
     fetchCamions();
   }, [sortOrder, statutFiltre, alerteFiltre, currentPage]);
+const formatStatut = (statut: string) => {
+  switch (statut?.toLowerCase()) {
+    case "en_attente":
+      return "En attente";
+    case "en_cours":
+      return "En cours";
+    case "pret_a_livrer":
+      return "Prêt à livrer";
+    case "livree":
+      return "Livré";
+    default:
+      return statut;
+  }
+};
 
-  const fetchCamions = async () => {
+ const fetchCamions = async () => {
   try {
     const token = localStorage.getItem("token");
     const params = new URLSearchParams();
@@ -50,11 +65,19 @@ export default function Dashboard() {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    setCamions(res.data ?? []);
+    const data = (res.data ?? []).map((c: any) => ({
+      ...c,
+      // 🧠 Forcer booléen réel à partir des cas possibles
+      a_des_alertes: c.a_des_alertes === true || c.a_des_alertes === "true" || c.a_des_alertes === 1,
+    }));
+
+    console.log("✅ Camions normalisés :", data);
+    setCamions(data);
   } catch (err) {
     console.error("Erreur API camions:", err);
   }
 };
+
 
 
   const filtered = camions.filter((c) =>
@@ -73,7 +96,7 @@ export default function Dashboard() {
       case "en_attente": return "bg-[#fef2f2] text-[#b91c1c] border border-[#fca5a5]";
       case "en_cours": return "bg-[#fff7ed] text-[#c2410c] border border-[#fdba74]";
       case "pret_a_livrer": return "bg-[#eef2ff] text-[#4338ca] border border-[#a5b4fc]";
-      case "livré": return "bg-[#eef2ff] text-[#4338ca] border border-[#a5b4fc]";
+      case "livree": return "bg-[#ecfdf5] text-[#047857] border border-[#6ee7b7]";
       default: return "bg-[#ecfdf5] text-[#047857] border border-[#6ee7b7]";
     }
   };
@@ -103,7 +126,7 @@ export default function Dashboard() {
 
   return (
      <div className="flex min-h-screen">
-  <aside className="w-64 bg-white shadow-lg p-4 flex flex-col justify-between">
+   <aside className="fixed top-0 left-0 h-screen w-64 bg-white shadow-lg p-4 flex flex-col justify-between z-50">
     <div>
       <img src="/logo2.png" alt="Bonne Route Auto" className="h-24 mb-4" />
       <nav className="space-y-3 text-base">
@@ -112,7 +135,7 @@ export default function Dashboard() {
           { icon: "", label: "Ajouter Camions", path: "/ajouter-camion", adminOnly: true },
           { icon: "", label: "Utilisateurs", path: "/ListeUtilisateurs", adminOnly: true },
         ]
-          .filter((item) => !(item.adminOnly && role === "viewer")) // 👈 cache si viewer
+          .filter((item) => !(item.adminOnly && role === "viewer"))
           .map((item) => (
             <button
               key={item.label}
@@ -127,15 +150,15 @@ export default function Dashboard() {
       </nav>
     </div>
 
-        <button
-          onClick={() => navigate("/login")}
-          className="text-sm text-red-600 hover:underline flex items-center gap-2"
-        >
-          <span></span> Se déconnecter
-        </button>
-      </aside>
+    <button
+      onClick={() => navigate("/login")}
+      className="text-base text-red-600 hover:underline flex items-center gap-2"
+    >
+      <span></span> Se déconnecter
+    </button>
+  </aside>
 
-      <main className="flex-1 p-4 bg-gray-50">
+  <main className="ml-64 w-[calc(100%-16rem)] h-screen overflow-y-auto p-6 bg-gray-50">
         <div className="max-w-5xl mx-auto">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center justify-between px-4 py-3 border-b bg-[#1a5c97]">
@@ -190,7 +213,7 @@ export default function Dashboard() {
                   Prêt à livrer
                 </button>
                 <button
-                  onClick={() => toggleStatutFiltre("livré")}
+                  onClick={() => toggleStatutFiltre("livree")}
                   className={`px-3 py-1 rounded-full text-xs font-semibold ${
                     statutFiltre === "livré" ? "bg-gray-200 text-gray-900" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
@@ -226,7 +249,7 @@ export default function Dashboard() {
               <div className="flex flex-wrap gap-2 mb-3">
                 {statutFiltre && (
                   <span className={`px-3 py-1 rounded-full text-xs font-semibold ${badgeColor(statutFiltre)} flex items-center gap-1`}>
-                    {statutFiltre.replaceAll("_", " ")}
+                    {formatStatut(statutFiltre)}
                     <button
                       onClick={() => handleRemoveFilter("statut")}
                       className="ml-1 text-xs hover:text-red-600"
@@ -277,18 +300,26 @@ export default function Dashboard() {
                         <td className="px-3 py-1.5">{c.numero_chassis}</td>
                         <td className="px-3 py-1.5">
                           <span className={`px-2 py-1 rounded-full text-xs font-semibold ${badgeColor(c.statut)}`}>
-                            {(c.statut ?? "").replaceAll("_", " ") || "Inconnu"}
+                            {formatStatut(c.statut) || "Inconnu"}
                           </span>
                         </td>
                         <td className="px-3 py-1.5 relative group">
-                          <span className={`text-lg ${c.a_des_alertes ? "text-red-600 blink" : "text-green-600"}`}>
-                            {c.a_des_alertes ? "⚠️" : "✔️"}
-                            {c.a_des_alertes && (
-                              <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded p-1 -top-8 left-1/2 transform -translate-x-1/2">
-                                Alerte active
-                              </span>
-                            )}
-                          </span>
+                          <span className="text-lg">
+  {c.alerte_dyn ? (
+    <span className="text-red-600 blink" title="Alerte dynamique (retard)">
+      ⚠️
+    </span>
+  ) : c.a_des_alertes ? (
+    <span className="text-yellow-500" title="Alerte manuelle">
+      ⚠️
+    </span>
+  ) : (
+    <span className="text-green-600" title="Aucune alerte">
+      ✔️
+    </span>
+  )}
+</span>
+
                         </td>
                       </tr>
                     ))}

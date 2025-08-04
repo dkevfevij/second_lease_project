@@ -58,6 +58,15 @@ export default function AjouterCamion() {
   const [modeEdition, setModeEdition] = useState(false);
   
 
+const requiredFields = [
+  "numero_chassis",
+  "immatriculation_etrangere",
+  "marque",
+  "modele",
+  "kilometrage",
+  "date_mise_en_circulation",
+  "inspection_reception",
+];
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -209,6 +218,7 @@ const handleSearchAuto = async (numero: string) => {
       await uploadPhotos(formData.numero_chassis);
       setInitialNumero(formData.numero_chassis); // Update to new numero_chassis if successful
       toast.success("Camion mis à jour");
+      navigate(`/camions/${formData.numero_chassis}`); 
     } catch (err: any) {
       console.error(err);
       const errorMsg = err.response?.data?.error || "Erreur lors de la mise à jour";
@@ -279,6 +289,20 @@ const handleSearchAuto = async (numero: string) => {
     }
     return true;
   };
+const formatStatut = (statut: string) => {
+  switch (statut?.toLowerCase()) {
+    case "en_attente":
+      return "En attente";
+    case "en_cours":
+      return "En cours";
+    case "pret_a_livrer":
+      return "Prêt à livrer";
+    case "livree":
+      return "Livré";
+    default:
+      return statut;
+  }
+};
 
   const uploadPhotos = async (numero_chassis: string) => {
     if (!files.length) return;
@@ -330,35 +354,35 @@ const handleSearchAuto = async (numero: string) => {
 
   return (
   <div className="flex min-h-screen">
-    <aside className="w-64 bg-white shadow-lg p-4 flex flex-col justify-between">
-      <div>
-        <img src="/logo2.png" alt="Bonne Route Auto" className="h-24 mb-4" />
-        <nav className="space-y-3 text-base">
-          {[
-            { icon: "", label: "Dashboard", path: "/dashboard" },
-            { icon: "", label: "Ajouter Camions", path: "/ajouter-camion" },
-            { icon: "", label: "Utilisateurs", path: "/ListeUtilisateurs" },
-          ].map((item) => (
-            <button
-              key={item.label}
-              onClick={() => navigate(item.path)}
-              className={`block w-full text-left px-3 py-2 hover:bg-gray-100 ${
-                location.pathname === item.path ? "bg-blue-50 text-blue-600 font-semibold" : ""
-              }`}
-            >
-              <span className="mr-3">{item.icon}</span> {item.label}
-            </button>
-          ))}
-        </nav>
-      </div>
-      <button
-        onClick={() => navigate("/login")}
-        className="text-base text-red-600 hover:underline flex items-center gap-2"
-      >
-        <span></span> Se déconnecter
-      </button>
-    </aside>
-    <main className="flex-1 p-8 bg-gray-50">
+    <aside className="fixed top-0 left-0 h-screen w-64 bg-white shadow-lg p-4 flex flex-col justify-between z-50">
+    <div>
+      <img src="/logo2.png" alt="Bonne Route Auto" className="h-24 mb-4" />
+      <nav className="space-y-3 text-base">
+        {[
+          { icon: "", label: "Dashboard", path: "/dashboard" },
+          { icon: "", label: "Ajouter Camions", path: "/ajouter-camion" },
+          { icon: "", label: "Utilisateurs", path: "/ListeUtilisateurs" },
+        ].map((item) => (
+          <button
+            key={item.label}
+            onClick={() => navigate(item.path)}
+            className={`block w-full text-left px-3 py-2 hover:bg-gray-100 ${
+              location.pathname === item.path ? "bg-blue-50 text-blue-600 font-semibold" : ""
+            }`}
+          >
+            <span className="mr-3">{item.icon}</span> {item.label}
+          </button>
+        ))}
+      </nav>
+    </div>
+    <button
+      onClick={() => navigate("/login")}
+      className="text-base text-red-600 hover:underline flex items-center gap-2"
+    >
+      <span></span> Se déconnecter
+    </button>
+  </aside>
+     <main className="ml-64 w-[calc(100%-16rem)] h-screen overflow-y-auto p-8 bg-gray-50">
       <Toaster position="top-right" />
       <div className="max-w-5xl mx-auto">
         <div className="flex justify-between items-center mb-6">
@@ -369,7 +393,7 @@ const handleSearchAuto = async (numero: string) => {
                 statutColor[formData.statut as keyof typeof statutColor] || "bg-gray-100"
               }`}
             >
-              {formData.statut?.replace("_", " ") || "Non défini"}
+              {formatStatut(formData.statut || "") || "Non défini"}
             </span>
             <button className="text-gray-500 hover:text-gray-700" onClick={handleSearch}></button>
           </div>
@@ -377,7 +401,10 @@ const handleSearchAuto = async (numero: string) => {
         <h2 className="text-3xl font-bold text-[#1a5c97] mb-6 text-center">Enregistrer un camion</h2>
         
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-1"> N° de châssis</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+  N° de châssis <span className="text-red-500 font-bold">*</span>
+</label>
+
           <input
             type="text"
             placeholder="Ex: XLR123456789"
@@ -394,8 +421,12 @@ const handleSearchAuto = async (numero: string) => {
             key !== "numero_chassis" && key !== "statut" && (
               <div key={key} className="col-span-1">
                 <label className="block mb-1 text-sm font-medium capitalize">
-                  {key.replace(/_/g, " ")}
-                </label>
+  {key.replace(/_/g, " ")}{" "}
+  {requiredFields.includes(key) && (
+    <span className="text-red-500 font-bold">*</span>
+  )}
+</label>
+
                 {key === "inspection_reception" || key === "memos" ? (
                   <textarea
                     name={key}

@@ -154,32 +154,35 @@ export default function ListeUtilisateurs() {
   return (
     <div className="flex min-h-screen">
       <Toaster position="top-right" />
-      <aside className="w-64 bg-white shadow-lg p-4 flex flex-col justify-between">
-        <div>
-          <img src="/logo2.png" className="h-24 mb-4" />
-          <nav className="space-y-3 text-base">
-            {[
-              { label: "Dashboard", path: "/dashboard" },
-              { label: "Ajouter Camions", path: "/ajouter-camion" },
-              { label: "Utilisateurs", path: "/ListeUtilisateurs" },
-            ].map((item) => (
-              <button
-                key={item.label}
-                onClick={() => navigate(item.path)}
-                className={`block w-full text-left px-3 py-2 hover:bg-gray-100 ${
-                  location.pathname === item.path ? "bg-blue-50 text-blue-600 font-semibold" : ""
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-        <button onClick={() => { localStorage.clear(); navigate("/login"); }}
-          className="text-base text-red-600 hover:underline">Se déconnecter</button>
-      </aside>
-
-      <main className="flex-1 p-8 bg-gray-50">
+      <aside className="fixed top-0 left-0 h-screen w-64 bg-white shadow-lg p-4 flex flex-col justify-between z-50">
+    <div>
+      <img src="/logo2.png" alt="Bonne Route Auto" className="h-24 mb-4" />
+      <nav className="space-y-3 text-base">
+        {[
+          { icon: "", label: "Dashboard", path: "/dashboard" },
+          { icon: "", label: "Ajouter Camions", path: "/ajouter-camion" },
+          { icon: "", label: "Utilisateurs", path: "/ListeUtilisateurs" },
+        ].map((item) => (
+          <button
+            key={item.label}
+            onClick={() => navigate(item.path)}
+            className={`block w-full text-left px-3 py-2 hover:bg-gray-100 ${
+              location.pathname === item.path ? "bg-blue-50 text-blue-600 font-semibold" : ""
+            }`}
+          >
+            <span className="mr-3">{item.icon}</span> {item.label}
+          </button>
+        ))}
+      </nav>
+    </div>
+    <button
+      onClick={() => navigate("/login")}
+      className="text-base text-red-600 hover:underline flex items-center gap-2"
+    >
+      <span></span> Se déconnecter
+    </button>
+  </aside>
+   <main className="ml-64 w-[calc(100%-16rem)] h-screen overflow-y-auto p-8 bg-gray-50">
         <div className="max-w-5xl mx-auto">
           <div className="bg-white rounded-lg shadow-md">
             <div className="flex justify-between items-center px-6 py-4 border-b" style={{ backgroundColor: "#1a5c97" }}>
