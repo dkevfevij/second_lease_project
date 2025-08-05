@@ -107,24 +107,18 @@ def modifier_camion(numero_chassis):
         camion_id = current.data[0]["id"]
         nouveau_chassis = data.get("numero_chassis", "").strip()
 
-        # Vérifier si le nouveau numéro est déjà utilisé (et différent)
+        # Vérifier si le nouveau numéro est déjà utilisé par un autre camion
         if nouveau_chassis and nouveau_chassis != numero_chassis:
             existing = supabase.table("camions").select("id").eq("numero_chassis", nouveau_chassis).execute()
             if existing.data and existing.data[0]["id"] != camion_id:
                 return jsonify({"error": "Ce nouveau numéro de châssis existe déjà"}), 400
 
-        # Mettre à jour les champs du camion
+        # Mise à jour du camion par ID
         update = supabase.table("camions").update(data).eq("id", camion_id).execute()
         if hasattr(update, "error") and update.error:
             return jsonify({"error": update.error.message}), 500
         if not update.data:
             return jsonify({"error": "Aucun camion modifié"}), 404
-
-        # Mettre à jour les tables liées si le numéro de châssis a changé
-        if nouveau_chassis != numero_chassis:
-            supabase.table("prestations").update({"numero_chassis": nouveau_chassis}).eq("numero_chassis", numero_chassis).execute()
-            supabase.table("pieces").update({"numero_chassis": nouveau_chassis}).eq("numero_chassis", numero_chassis).execute()
-            supabase.table("reminders").update({"numero_chassis": nouveau_chassis}).eq("numero_chassis", numero_chassis).execute()
 
         return jsonify({"message": "Camion modifié avec succès", "data": update.data}), 200
 
