@@ -47,7 +47,7 @@ export default function EnCoursCamion() {
   const { chassis } = useParams();
   const [camion, setCamion] = useState<Camion | null>(null);
   const [ficheRef, setFicheRef] = useState("");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [prestations, setPrestations] = useState<Prestation[]>([]);
   const [pieces, setPieces] = useState<Piece[]>([]);
   const [fiches, setFiches] = useState<string[]>([]);
@@ -61,7 +61,7 @@ export default function EnCoursCamion() {
   const [role, setRole] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
-
+  
   useEffect(() => {
     if (typeof window !== "undefined") {
       setToken(localStorage.getItem("token"));
@@ -70,11 +70,15 @@ export default function EnCoursCamion() {
   }, []);
 
   useEffect(() => {
-    if (message === "⚠️ Vous devez valider toutes les prestations et livrer toutes les pièces avant de continuer.") {
-      const timer = setTimeout(() => setMessage(""), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [message]);
+  if (!message) return;
+
+  const timeout = setTimeout(() => {
+    setMessage(null); // ⬅️ Efface le message automatiquement
+  }, 5000);
+
+  return () => clearTimeout(timeout);
+}, [message]);
+
 
   const [showLivreeModal, setShowLivreeModal] = useState(false);
   const [showCongratsPopup, setShowCongratsPopup] = useState(false);
@@ -120,7 +124,7 @@ const handleStatusToEnControle = async () => {
     await fetchCamionData();
   } catch (e) {
     console.error("Erreur changement vers en_controle :", e);
-    setMessage("Erreur lors de la mise à jour du statut");
+    setMessage({ text: "Erreur lors de la mise à jour du statut", type: "error"});
   } finally {
     setLoadingStatus(false);
     setShowControleModal(false);
@@ -167,7 +171,7 @@ const handleStatusToEnControle = async () => {
       }, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setMessage(`Rappel "${type.replace("_", " ")}" validé avec succès`);
+      setMessage({ text: `Rappel "${type.replace("_", " ")}" validé avec succès`, type: "success"});
       setComments((prev) => ({ ...prev, [type]: "" }));
       const res = await axios.get(`${API_BASE_URL}/api/camions/${chassis}/reminders`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -179,7 +183,7 @@ const handleStatusToEnControle = async () => {
       setActiveReminders(nouveaux);
     } catch (err: any) {
       console.error("Erreur validation reminder:", err.response?.data || err.message);
-      setMessage("❌ Erreur lors de la validation");
+      setMessage({ text: "Erreur lors de la validation", type: "error"});
     }
   };
 
@@ -260,12 +264,12 @@ const handleStatusToEnControle = async () => {
 
  const importerFiche = async () => {
   if (!ficheRef.trim()) {
-    setMessage("Référence vide. Veuillez saisir une référence.");
+    setMessage({ text: "Référence vide. Veuillez saisir une référence.", type: "error"});
     return;
   }
 
   setLoadingImport(true);
-  setMessage("");
+  
 
   try {
     // 1. Importer la fiche
@@ -287,9 +291,9 @@ const handleStatusToEnControle = async () => {
 
     // 3. Recharger les données
     await fetchCamionData();
-    setMessage("Importation réussie ");
+    setMessage({ text: "Importation réussie ", type: "success"});
   } catch (e) {
-    setMessage("Erreur lors de l'importation : Numéro de châssis incohérent ou erreur de saisie de la fiche d'intervention.");
+    setMessage({ text: "Erreur lors de l'importation : Numéro de châssis incohérent ou erreur de saisie de la fiche d'intervention.", type: "error"});
     await fetchCamionData();
   } finally {
     setLoadingImport(false);
@@ -341,10 +345,10 @@ const handleStatusToEnControle = async () => {
         { nouveau_statut: "pret_a_livrer" },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setMessage("Statut mis à jour avec succès ✅");
+      setMessage({ text: "Statut mis à jour ", type: "success"});
       await fetchCamionData();
     } catch (e) {
-      setMessage("Erreur lors de la mise à jour du statut");
+      setMessage({ text: "Erreur lors de la mise à jour du statut", type: "error"});
     } finally {
       setLoadingStatus(false);
       setShowModal(false);
@@ -359,11 +363,11 @@ const handleStatusToEnControle = async () => {
         { nouveau_statut: "en_cours" },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setMessage("Statut mis à jour avec succès ✅");
+      setMessage({ text: "Statut mis à jour ", type: "success"});
       await fetchCamionData();
     } catch (err) {
       console.error("Erreur retour en arrière", err);
-      setMessage("Erreur lors du retour en arrière");
+      setMessage({ text: "Erreur lors du retour en arrière", type: "error"});
     } finally {
       setLoadingStatus(false);
       setShowRetourModal(false);
@@ -372,7 +376,7 @@ const handleStatusToEnControle = async () => {
 
   const handleStatusToLivree = async () => {
     setLoadingStatus(true);
-    setMessage("");
+    
     try {
       const response = await axios.patch(
         `${API_BASE_URL}/api/camions/${chassis}/changer-statut`,
@@ -380,10 +384,10 @@ const handleStatusToEnControle = async () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       console.log("✅ Réponse backend :", response.data);
-      setMessage("Statut mis à jour à 'Livrée' avec succès 🎉");
+      setMessage({ text: "Statut mis à jour à 'Livrée' ", type: "success"});
       await fetchCamionData();
     } catch (e: any) {
-      console.error("❌ Erreur changement statut :", e?.response?.data || e.message);
+      console.error(" Erreur changement statut :", e?.response?.data || e.message);
       setMessage(e?.response?.data?.error || "Erreur lors de la mise à jour du statut");
     } finally {
       setLoadingStatus(false);
@@ -478,23 +482,57 @@ const handleStatusToEnControle = async () => {
             return (
               <div key={state} className="flex flex-col items-center w-1/4 group">
                 <div
-                  onClick={() => {
-                              if (role !== "admin") return;
+                 onClick={() => {
+  if (role !== "admin") return;
 
-                              if (state === "en_controle" && camion?.statut === "en_attente") {
-                                setShowControleModal(true);
-                              } else if (state === "en_cours") {
-                                if (camion?.statut === "en_controle") setShowModal(true);
-                                if (camion?.statut === "pret_a_livrer") setShowRetourModal(true);
-                              } else if (state === "pret_a_livrer" && camion?.statut === "en_cours") {
-                                toutesValidees
-                                  ? setShowModal(true)
-                                  : setMessage("⚠️ Vous devez valider toutes les prestations et livrer toutes les pièces avant de continuer.");
-                              } else if (state === "livree" && camion?.statut === "pret_a_livrer") {
-                                setShowLivreeModal(true);
-                              }
-                            }}
+  if (state === "en_controle" && camion?.statut === "en_attente") {
+    setShowControleModal(true);
+  }
 
+  else if (state === "en_cours") {
+    if (camion?.statut === "en_controle") {
+      if (fiches.length === 0) {
+        setMessage({ text: " Vous devez importer une fiche d'intervention avant de continuer.", type: "error"});
+        return;
+      }
+      setShowModal(true);
+    }
+
+    else if (camion?.statut === "pret_a_livrer") {
+      setShowRetourModal(true);
+    }
+
+    else {
+      setMessage({ text: "Passage non autorisé vers 'En cours' depuis l'état actuel.",type: "error"});
+    }
+  }
+
+  else if (state === "pret_a_livrer") {
+    if (camion?.statut === "en_controle") {
+      setMessage({ text: " Passage interdit : le camion doit d'abord passer par l'état 'En cours'.",type: "error"});
+      return;
+    }
+
+    if (camion?.statut === "en_cours") {
+      if (toutesValidees) {
+        setShowModal(true);
+      } else {
+        setMessage({ text: "Vous devez valider toutes les prestations et livrer toutes les pièces avant de continuer.",type: "error"});
+      }
+    } else {
+      setMessage({ text: " Passage non autorisé vers 'Prêt à livrer' depuis l'état actuel.",type: "error"});
+    }
+  }
+
+  else if (state === "livree") {
+    if (camion?.statut !== "pret_a_livrer") {
+      setMessage({ text: "Passage interdit : le camion doit d'abord passer par l'état 'Prêt à livrer'.",type: "error"});
+      return;
+    }
+
+    setShowLivreeModal(true);
+  }
+}}
                   title={
                     camion?.statut !== state && state !== "livree" && role !== "admin"
                       ? "Réservé aux administrateurs"
@@ -723,7 +761,8 @@ const handleStatusToEnControle = async () => {
                   "Importer"
                 )}
               </button>
-              {message && <span className="text-sm text-gray-600">{message}</span>}
+              {message && <span className="text-sm text-gray-600">{message?.text}
+</span>}
             </div>
           )}
 
@@ -807,16 +846,22 @@ const handleStatusToEnControle = async () => {
             </>
           )}
 
-          {message === "⚠️ Vous devez valider toutes les prestations et livrer toutes les pièces avant de continuer." && (
-            <div className="fixed top-6 right-6 bg-orange-100 border-l-4 border-orange-500 text-orange-900 px-6 py-4 rounded-lg shadow-lg z-50 flex items-start gap-3 animate-fade-in">
-              <div className="text-xl">⚠️</div>
-              <div>
-                <p className="font-semibold text-sm">
-                  Vous devez valider toutes les prestations<br />et livrer toutes les pièces avant de continuer.
-                </p>
-              </div>
-            </div>
-          )}
+        {message && (
+  <div
+    className={`fixed top-6 right-6 px-6 py-4 rounded-lg shadow-lg z-50 flex items-start gap-3 animate-fade-in
+      ${message.type === "error"
+        ? "bg-red-100 border-l-4 border-red-500 text-red-900"
+        : "bg-green-100 border-l-4 border-green-500 text-green-900"}`}
+  >
+    <div className="text-xl">{message.type === "error" ? "❌" : "✅"}</div>
+    <div>
+      <p className="font-semibold text-sm">{message.text}</p>
+    </div>
+  </div>
+)}
+
+
+
 
           {showModal && (
             <div className="fixed inset-0 bg-white/10 backdrop-blur-sm flex items-center justify-center z-50">

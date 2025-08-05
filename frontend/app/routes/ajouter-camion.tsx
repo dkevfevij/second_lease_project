@@ -14,6 +14,7 @@ const statutColor = {
 };
 
 interface CamionData {
+  id?: number;
   numero_chassis: string;
   immatriculation_etrangere: string;
   marque: string;
@@ -60,6 +61,7 @@ export default function AjouterCamion() {
   
 
 const requiredFields = [
+  
   "numero_chassis",
   "immatriculation_etrangere",
   "marque",
@@ -122,18 +124,21 @@ const handleSearchAuto = async (numero: string) => {
     });
 
     if (res.data) {
-      setFormData(res.data);
-      setInitialNumero(res.data.numero_chassis);
+      setFormData(res.data); // res.data doit inclure `id` grâce à ta route modifiée
+      setInitialNumero(res.data.numero_chassis); // utile si tu veux afficher l'ancien châssis
       setLocked(false);
-      setModeEdition(true); // 👈 Active le mode édition
+      setModeEdition(true); // active les boutons Modifier / Supprimer
       toast.success("Camion chargé pour édition");
     } else {
       toast.error("Camion introuvable");
       setLocked(true);
+      resetForm(); // optionnel : remettre à zéro les champs si erreur
     }
   } catch (err) {
+    console.error("Erreur lors du chargement du camion :", err);
     toast.error("Erreur lors du chargement");
     setLocked(true);
+    resetForm(); // optionnel aussi
   } finally {
     setLoadingSearch(false);
   }
@@ -207,27 +212,50 @@ const handleSearchAuto = async (numero: string) => {
 
 
   const handleUpdate = async () => {
-    if (!validateForm() || !initialNumero) {
-      toast.error(" Impossible de modifier : numéro d'origine introuvable");
-      return;
-    }
-    setLoadingUpdate(true);
-    try {
-      const res = await axios.put(`${API_BASE_URL}/api/camions/${initialNumero}`, formData, {
+  if (!validateForm()) {
+    toast.error("Formulaire invalide.");
+    return;
+  }
+
+  if (!formData.id) {
+    toast.error("ID du camion introuvable. Veuillez recharger la page.");
+    return;
+  }
+
+  setLoadingUpdate(true);
+
+  try {
+    const res = await axios.put(
+      `${API_BASE_URL}/api/camions/by-id/${formData.id}`,
+      formData,
+      {
         headers: { Authorization: `Bearer ${token}` },
-      });
-      await uploadPhotos(formData.numero_chassis);
-      setInitialNumero(formData.numero_chassis); // Update to new numero_chassis if successful
-      toast.success("Camion mis à jour");
-      navigate(`/camions/${formData.numero_chassis}`); 
-    } catch (err: any) {
-      console.error(err);
-      const errorMsg = err.response?.data?.error || "Erreur lors de la mise à jour";
-      toast.error(` ${errorMsg.includes("duplicate key") ? "Numéro déjà existant" : errorMsg}`);
-    } finally {
-      setLoadingUpdate(false);
+      }
+    );
+
+    await uploadPhotos(formData.numero_chassis);
+
+    // Met à jour l'ancien numéro pour la redirection
+    setInitialNumero(formData.numero_chassis);
+
+    toast.success("Camion mis à jour avec succès");
+
+    // Redirection vers la fiche détaillée
+    navigate(`/camions/${formData.numero_chassis}`);
+  } catch (err: any) {
+    console.error("Erreur update:", err);
+    const errorMsg = err.response?.data?.error || "Erreur lors de la mise à jour";
+
+    if (errorMsg.includes("châssis") || errorMsg.includes("duplicate")) {
+      toast.error("❌ Ce numéro de châssis est déjà utilisé.");
+    } else {
+      toast.error(`❌ ${errorMsg}`);
     }
-  };
+  } finally {
+    setLoadingUpdate(false);
+  }
+};
+
 
   const handleDelete = async () => {
     if (!formData.numero_chassis) return;
