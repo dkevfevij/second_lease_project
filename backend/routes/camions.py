@@ -199,7 +199,7 @@ def get_camion_by_numero(numero_chassis):
 def get_camion_for_edit(numero_chassis):
     try:
         response = supabase.table("camions").select(
-            "numero_chassis, immatriculation_etrangere, marque, modele, kilometrage, date_mise_en_circulation, client, inspection_reception, memos, statut"
+            "id, numero_chassis, immatriculation_etrangere, marque, modele, kilometrage, date_mise_en_circulation, client, inspection_reception, memos, statut"
         ).eq("numero_chassis", numero_chassis).single().execute()
 
         if not response.data:
