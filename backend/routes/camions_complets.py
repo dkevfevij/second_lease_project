@@ -34,31 +34,11 @@ def token_required(f):
 @token_required
 def get_all_camions():
     try:
-        # Lire les filtres depuis la query string
-        statut = request.args.get("statut")
-        alerte = request.args.get("alertes")  # "true" ou "false"
-        sort = request.args.get("sort", "desc")  # "asc" ou "desc"
-        page = int(request.args.get("page", 1))
-        limit = int(request.args.get("limit", 10))
-        offset = (page - 1) * limit
-
-        # Requête initiale
-        query = supabase.table("camions").select("*")
-
-        # Filtrage par statut
-        if statut:
-            query = query.eq("statut", statut)
-
-        # Tri
-        if sort == "asc":
-            query = query.order("date_creation", desc=False)
-        else:
-            query = query.order("date_creation", desc=True)
-
-        # Récupération des données
-        res = query.range(offset, offset + limit - 1).execute()
-
         now = datetime.utcnow()
+
+        # ✅ Récupérer tous les camions sans filtre/pagination
+        res = supabase.table("camions").select("*").order("date_creation", desc=True).execute()
+
         result = []
 
         for camion in res.data:
@@ -67,6 +47,7 @@ def get_all_camions():
             date_str = camion.get("date_statut_en_cours")
             alerte_active = False
 
+            # ✅ Calcul alerte dynamique (non modifié)
             if statut == "en_cours" and date_str:
                 try:
                     date_statut = datetime.fromisoformat(date_str)
@@ -75,20 +56,8 @@ def get_all_camions():
                 except:
                     pass
 
-            # ✅ On n’écrase plus la valeur stockée en base
-            camion["alerte_dyn"] = alerte_active  # ← champ ajouté dynamiquement
+            camion["alerte_dyn"] = alerte_active
             result.append(camion)
-
-        # Si filtre sur les alertes activé côté client (basé sur a_des_alertes uniquement)
-        if alerte == "true":
-            result = [c for c in result if c.get("a_des_alertes") is True]
-        elif alerte == "false":
-            result = [c for c in result if not c.get("a_des_alertes")]
-
-        # Debug console serveur
-        print("🚨 DEBUG CAMIONS AVEC ALERTES")
-        for camion in result:
-            print(camion["numero_chassis"], "base:", camion.get("a_des_alertes"), "dyn:", camion.get("alerte_dyn"))
 
         return jsonify(result), 200
 
