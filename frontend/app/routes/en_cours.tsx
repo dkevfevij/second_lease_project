@@ -428,12 +428,14 @@ const handleStatusToEnControle = async () => {
       <aside className="fixed top-0 left-0 h-screen w-64 bg-white shadow-lg p-4 flex flex-col justify-between z-50">
         <div>
           <img src="/logo2.png" alt="Bonne Route Auto" className="h-24 mb-4" />
-          <nav className="space-y-3 text-base">
-            {[
-              { icon: "", label: "Dashboard", path: "/dashboard" },
-              { icon: "", label: "Ajouter Camions", path: "/ajouter-camion" },
-              { icon: "", label: "Utilisateurs", path: "/ListeUtilisateurs" },
-            ].map((item) => (
+           <nav className="space-y-3 text-base">
+        {[
+          { icon: "", label: "Dashboard", path: "/dashboard", adminOnly: false },
+          { icon: "", label: "Ajouter Camions", path: "/ajouter-camion", adminOnly: true },
+          { icon: "", label: "Utilisateurs", path: "/ListeUtilisateurs", adminOnly: true },
+        ]
+          .filter((item) => !(item.adminOnly && role === "viewer"))
+          .map((item) => (
               <button
                 key={item.label}
                 onClick={() => navigate(item.path)}
