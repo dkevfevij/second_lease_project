@@ -7,7 +7,8 @@ import toast, { Toaster } from "react-hot-toast";
 
 const statutColor = {
   en_attente: "bg-[#fef2f2] text-[#b91c1c] border border-[#fca5a5]",       // rouge pâle élégant
-  en_cours: "bg-[#fff7ed] text-[#c2410c] border border-[#fdba74]",        // orange subtil et pro
+  en_cours: "bg-[#fefce8] text-[#92400e] border border-[#fcd34d]", 
+  en_controle: "bg-[#f3e8ff] text-[#7e22ce] border border-[#d8b4fe]",       // orange subtil et pro
   pret_a_livrer: "bg-[#eef2ff] text-[#4338ca] border border-[#a5b4fc]",   // vert clair pastel
   livree: "bg-[#ecfdf5] text-[#047857] border border-[#6ee7b7]",          // bleu doux et lisible
 };
@@ -293,6 +294,8 @@ const formatStatut = (statut: string) => {
   switch (statut?.toLowerCase()) {
     case "en_attente":
       return "En attente";
+    case "en_controle": 
+      return "En contrôle";
     case "en_cours":
       return "En cours";
     case "pret_a_livrer":

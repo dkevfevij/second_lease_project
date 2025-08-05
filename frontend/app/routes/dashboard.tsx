@@ -40,6 +40,8 @@ const formatStatut = (statut: string) => {
   switch (statut?.toLowerCase()) {
     case "en_attente":
       return "En attente";
+    case "en_controle": 
+      return "En contrôle";
     case "en_cours":
       return "En cours";
     case "pret_a_livrer":
@@ -54,24 +56,17 @@ const formatStatut = (statut: string) => {
  const fetchCamions = async () => {
   try {
     const token = localStorage.getItem("token");
-    const params = new URLSearchParams();
-    params.append("sort", sortOrder);
-    if (statutFiltre) params.append("statut", statutFiltre);
-    if (alerteFiltre) params.append("alertes", alerteFiltre);
-    params.append("page", currentPage.toString());
-    params.append("limit", pageSize.toString());
 
-    const res = await axios.get(`${API_BASE_URL}/api/camions/liste_complets?${params.toString()}`, {
+    const res = await axios.get(`${API_BASE_URL}/api/camions/liste_complets`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
     const data = (res.data ?? []).map((c: any) => ({
       ...c,
-      // 🧠 Forcer booléen réel à partir des cas possibles
       a_des_alertes: c.a_des_alertes === true || c.a_des_alertes === "true" || c.a_des_alertes === 1,
     }));
 
-    console.log("✅ Camions normalisés :", data);
+    console.log("✅ Camions récupérés (sans filtre backend) :", data);
     setCamions(data);
   } catch (err) {
     console.error("Erreur API camions:", err);
@@ -80,9 +75,26 @@ const formatStatut = (statut: string) => {
 
 
 
-  const filtered = camions.filter((c) =>
+
+  const filtered = camions
+  .filter((c) =>
     c.numero_chassis.toLowerCase().includes(search.toLowerCase())
-  );
+  )
+  .filter((c) =>
+    statutFiltre ? c.statut === statutFiltre : true
+  )
+  .filter((c) =>
+    alerteFiltre === "true"
+      ? c.a_des_alertes
+      : alerteFiltre === "false"
+      ? !c.a_des_alertes
+      : true
+  )
+  .sort((a, b) => {
+    const dateA = new Date(a.date_creation ?? "").getTime();
+    const dateB = new Date(b.date_creation ?? "").getTime();
+    return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+  });
 
   const paginatedCamions = filtered.slice(
     (currentPage - 1) * pageSize,
@@ -93,12 +105,20 @@ const formatStatut = (statut: string) => {
 
   const badgeColor = (statut: string) => {
     switch (statut.toLowerCase()) {
-      case "en_attente": return "bg-[#fef2f2] text-[#b91c1c] border border-[#fca5a5]";
-      case "en_cours": return "bg-[#fff7ed] text-[#c2410c] border border-[#fdba74]";
-      case "pret_a_livrer": return "bg-[#eef2ff] text-[#4338ca] border border-[#a5b4fc]";
-      case "livree": return "bg-[#ecfdf5] text-[#047857] border border-[#6ee7b7]";
-      default: return "bg-[#ecfdf5] text-[#047857] border border-[#6ee7b7]";
-    }
+  case "en_attente":
+    return "bg-[#fef2f2] text-[#b91c1c] border border-[#fca5a5]";
+  case "en_controle":
+    return "bg-[#f3e8ff] text-[#7e22ce] border border-[#d8b4fe]";
+  case "en_cours":
+    return "bg-[#fefce8] text-[#92400e] border border-[#fcd34d]";
+  case "pret_a_livrer":
+    return "bg-[#eef2ff] text-[#4338ca] border border-[#a5b4fc]";
+  case "livree":
+    return "bg-[#ecfdf5] text-[#047857] border border-[#6ee7b7]";
+  default:
+    return "bg-gray-100 text-gray-600 border border-gray-300";
+}
+
   };
 
   const handleRemoveFilter = (filterType: string) => {
@@ -107,19 +127,19 @@ const formatStatut = (statut: string) => {
     if (filterType === "sort") setSortOrder("desc");
     setCurrentPage(1);
     if (!statutFiltre && !alerteFiltre && filterType !== "sort") setSortOrder("desc"); // Ensure default sort when no filters
-    fetchCamions();
+    
   };
 
   const toggleStatutFiltre = (statut: string) => {
     setStatutFiltre(statutFiltre === statut ? "" : statut);
     setCurrentPage(1);
-    fetchCamions();
+    
   };
 
   const toggleAlerteFiltre = (value: string) => {
     setAlerteFiltre(alerteFiltre === value ? "" : value);
     setCurrentPage(1);
-    fetchCamions();
+    
   };
 
   const alertCount = filtered.filter((c) => c.a_des_alertes).length;
@@ -198,6 +218,15 @@ const formatStatut = (statut: string) => {
     En attente
   </button>
   <button
+  onClick={() => toggleStatutFiltre("en_controle")}
+  disabled={statutFiltre === "en_controle"}
+  className={`px-3 py-1 rounded-full text-xs font-semibold ${
+    statutFiltre === "en_controle" ? "bg-gray-200 text-gray-900" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+  }`}
+>
+  En contrôle
+</button>
+  <button
     onClick={() => toggleStatutFiltre("en_cours")}
     disabled={statutFiltre === "en_cours"}
     className={`px-3 py-1 rounded-full text-xs font-semibold ${
@@ -206,6 +235,7 @@ const formatStatut = (statut: string) => {
   >
     En cours
   </button>
+  
   <button
     onClick={() => toggleStatutFiltre("pret_a_livrer")}
     disabled={statutFiltre === "pret_a_livrer"}

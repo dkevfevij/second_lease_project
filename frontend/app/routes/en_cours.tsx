@@ -78,6 +78,8 @@ export default function EnCoursCamion() {
 
   const [showLivreeModal, setShowLivreeModal] = useState(false);
   const [showCongratsPopup, setShowCongratsPopup] = useState(false);
+  const [showControleModal, setShowControleModal] = useState(false);
+
 
   const showAlerteRetard = () => {
     if (camion?.statut !== "en_cours" || !camion.date_statut_en_cours) return false;
@@ -97,12 +99,35 @@ export default function EnCoursCamion() {
   const formatStatut = (statut: string) => {
     switch (statut?.toLowerCase()) {
       case "en_attente": return "En attente";
+      case "en_controle": return "En contrôle";
       case "en_cours": return "En cours";
       case "pret_a_livrer": return "Prêt à livrer";
       case "livree": return "Livré";
       default: return statut;
     }
   };
+const handleStatusToEnControle = async () => {
+  console.log("clic confirmé vers en_controle"); // ✅ DEBUG
+
+  setLoadingStatus(true);
+  try {
+    await axios.patch(
+      `${API_BASE_URL}/api/camions/${chassis}/changer-statut`,
+      { nouveau_statut: "en_controle" },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    
+    await fetchCamionData();
+  } catch (e) {
+    console.error("Erreur changement vers en_controle :", e);
+    setMessage("Erreur lors de la mise à jour du statut");
+  } finally {
+    setLoadingStatus(false);
+    setShowControleModal(false);
+  }
+};
+
+
 
   const fetchReminders = async () => {
     if (!chassis || !token || camion?.statut !== "pret_a_livrer") return;
@@ -233,34 +258,44 @@ export default function EnCoursCamion() {
     fetchAlerteRetard();
   }, [token]);
 
-  const importerFiche = async () => {
-    if (!ficheRef.match(/^FIT\d{4}-\d{5}$/)) {
-      setMessage("Référence invalide. Numéro de chassis différent");
-      return;
-    }
-    setLoadingImport(true);
-    setMessage("");
-    try {
-      await axios.post(
-        `${API_BASE_URL}/api/importer_fiche/${ficheRef}`,
-        { chassis },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+ const importerFiche = async () => {
+  if (!ficheRef.trim()) {
+    setMessage("Référence vide. Veuillez saisir une référence.");
+    return;
+  }
+
+  setLoadingImport(true);
+  setMessage("");
+
+  try {
+    // 1. Importer la fiche
+    await axios.post(
+      `${API_BASE_URL}/api/importer_fiche/${ficheRef}`,
+      { chassis },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    // 2. Changer le statut si on est en "en_controle"
+    if (camion?.statut === "en_controle") {
       await axios.patch(
         `${API_BASE_URL}/api/camions/${chassis}/changer-statut`,
         { nouveau_statut: "en_cours" },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setCamion((prev) => (prev ? { ...prev, statut: "en_cours" } : prev));
-      await fetchCamionData();
-      setMessage("Importation réussie ");
-    } catch (e) {
-      setMessage("Erreur lors de l'importation : Numéro de châssis incohérent ou erreur de saisie de la fiche d'intervention.");
-      await fetchCamionData();
-    } finally {
-      setLoadingImport(false);
     }
-  };
+
+    // 3. Recharger les données
+    await fetchCamionData();
+    setMessage("Importation réussie ");
+  } catch (e) {
+    setMessage("Erreur lors de l'importation : Numéro de châssis incohérent ou erreur de saisie de la fiche d'intervention.");
+    await fetchCamionData();
+  } finally {
+    setLoadingImport(false);
+  }
+};
+
 
   const handleCheckPrestation = async (id: number, value: boolean) => {
     if (role !== "admin") return;
@@ -381,9 +416,11 @@ export default function EnCoursCamion() {
   const toutesValidees = prestations.every((p) => p.est_validee) && pieces.every((p) => p.est_livree);
   const statutColor = {
     en_attente: "bg-[#fef2f2] text-[#b91c1c] border border-[#fca5a5]",
-    en_cours: "bg-[#fff7ed] text-[#c2410c] border border-[#fdba74]",
+    en_cours: "bg-[#fefce8] text-[#92400e] border border-[#fcd34d]",
     pret_a_livrer: "bg-[#eef2ff] text-[#4338ca] border border-[#a5b4fc]",
     livree: "bg-[#ecfdf5] text-[#047857] border border-[#6ee7b7]",
+    en_controle: "bg-[#f3e8ff] text-[#7e22ce] border border-[#d8b4fe]",
+
   };
 
   return (
@@ -426,13 +463,13 @@ export default function EnCoursCamion() {
           <div
             className="h-1 bg-[#1a5c97] rounded transition-all duration-500"
             style={{
-              width: `${(100 * ["en_attente", "en_cours", "pret_a_livrer", "livree"].indexOf(camion?.statut || "")) / 3}%`,
+              width: `${(100 * ["en_attente", "en_controle", "en_cours", "pret_a_livrer", "livree"].indexOf(camion?.statut || "")) / 3}%`,
             }}
           />
         </div>
         <div className="flex justify-between items-center relative z-10">
-          {["en_attente", "en_cours", "pret_a_livrer", "livree"].map((state, index) => {
-            const currentIndex = ["en_attente", "en_cours", "pret_a_livrer", "livree"].indexOf(camion?.statut || "");
+          {["en_attente", "en_controle", "en_cours", "pret_a_livrer", "livree"].map((state, index) => {
+            const currentIndex = ["en_attente", "en_controle", "en_cours", "pret_a_livrer", "livree"].indexOf(camion?.statut || "");
             const isCompleted = index < currentIndex;
             const isActive = camion?.statut === state;
 
@@ -440,15 +477,22 @@ export default function EnCoursCamion() {
               <div key={state} className="flex flex-col items-center w-1/4 group">
                 <div
                   onClick={() => {
-                    if (state === "en_cours" && role === "admin") {
-                      if (camion?.statut === "en_attente") setShowModal(true);
-                      else if (camion?.statut === "pret_a_livrer") setShowRetourModal(true);
-                    } else if (state === "pret_a_livrer" && camion?.statut === "en_cours" && role === "admin") {
-                      toutesValidees ? setShowModal(true) : setMessage("⚠️ Vous devez valider toutes les prestations et livrer toutes les pièces avant de continuer.");
-                    } else if (state === "livree" && camion?.statut === "pret_a_livrer" && role === "admin") {
-                      setShowLivreeModal(true);
-                    }
-                  }}
+                              if (role !== "admin") return;
+
+                              if (state === "en_controle" && camion?.statut === "en_attente") {
+                                setShowControleModal(true);
+                              } else if (state === "en_cours") {
+                                if (camion?.statut === "en_controle") setShowModal(true);
+                                if (camion?.statut === "pret_a_livrer") setShowRetourModal(true);
+                              } else if (state === "pret_a_livrer" && camion?.statut === "en_cours") {
+                                toutesValidees
+                                  ? setShowModal(true)
+                                  : setMessage("⚠️ Vous devez valider toutes les prestations et livrer toutes les pièces avant de continuer.");
+                              } else if (state === "livree" && camion?.statut === "pret_a_livrer") {
+                                setShowLivreeModal(true);
+                              }
+                            }}
+
                   title={
                     camion?.statut !== state && state !== "livree" && role !== "admin"
                       ? "Réservé aux administrateurs"
@@ -648,7 +692,7 @@ export default function EnCoursCamion() {
             </div>
           )}
 
-          {(camion?.statut === "en_cours" || camion?.statut === "en_attente") && role === "admin" && (
+          {(camion?.statut === "en_cours" || camion?.statut === "en_controle") && role === "admin" && (
             <div className="flex items-center gap-3 mb-6 relative">
               <div className="group">
                 <input
@@ -852,6 +896,49 @@ export default function EnCoursCamion() {
               </div>
             </div>
           )}
+
+          {showControleModal && (
+  <div className="fixed inset-0 bg-white/10 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full border border-gray-200 transform transition-all duration-300 scale-100">
+      <h3 className="text-xl font-semibold text-gray-800 mb-6 text-center">
+        Confirmer le passage à "En contrôle"
+      </h3>
+      <p className="text-gray-600 mb-6 text-center">
+        Êtes-vous sûr de vouloir passer ce camion à l’état <strong>En contrôle</strong> ?
+      </p>
+      <div className="flex justify-center gap-4">
+        <button
+          onClick={() => setShowControleModal(false)}
+          className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition duration-200 font-medium"
+        >
+          Annuler
+        </button>
+        <button
+          onClick={handleStatusToEnControle}
+          disabled={loadingStatus}
+          className="bg-[#1a5c97] hover:bg-[#14497a] text-white px-6 py-2 rounded-lg shadow-md transition font-medium disabled:opacity-50"
+        >
+          {loadingStatus ? (
+            <>
+              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v8h8a8 8 0 01-8 8 8 8 0 01-8-8z"
+                />
+              </svg>
+              Mise à jour...
+            </>
+          ) : (
+            "Confirmer"
+          )}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
 
           {showLivreeModal && (
             <div className="fixed inset-0 bg-white/10 backdrop-blur-sm flex items-center justify-center z-50">

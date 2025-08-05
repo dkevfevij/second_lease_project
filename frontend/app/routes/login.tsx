@@ -63,7 +63,7 @@ export default function Login() {
                 required
                 value={nomUtilisateur}
                 onChange={(e) => setNomUtilisateur(e.target.value)}
-                placeholder="ex: n.hilali"
+                placeholder="nom d'utilisateur"
                 className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -75,6 +75,7 @@ export default function Login() {
                 required
                 value={motDePasse}
                 onChange={(e) => setMotDePasse(e.target.value)}
+                placeholder=". . . . . . . . . . ."
                 className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button
@@ -88,9 +89,7 @@ export default function Login() {
 
             {erreur && <p className="text-red-600 text-sm">{erreur}</p>}
 
-            <div className="text-right text-sm text-blue-600 hover:underline cursor-pointer">
-              Mot de passe oublié
-            </div>
+            
 
             <button
               type="submit"
