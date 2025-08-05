@@ -86,7 +86,7 @@ def add_camion():
         return jsonify({"error": str(e)}), 500
 
 # -----------------------------
-# Modifier un camion
+# Modifier un camion par num chassis 
 # -----------------------------
 @camions_bp.route("/<string:numero_chassis>", methods=["PUT"])
 @token_required
@@ -124,7 +124,37 @@ def modifier_camion(numero_chassis):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+# -----------------------------
+# Modifier un camion par id
+# -----------------------------
+@camions_bp.route("/by-id/<int:camion_id>", methods=["PUT"])
+@token_required
+@admin_required
+def modifier_camion_par_id(camion_id):
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Aucune donnée reçue"}), 400
 
+        nouveau_chassis = data.get("numero_chassis", "").strip()
+
+        # Vérifier si un autre camion utilise déjà ce numéro
+        if nouveau_chassis:
+            existing = supabase.table("camions").select("id").eq("numero_chassis", nouveau_chassis).execute()
+            if existing.data and existing.data[0]["id"] != camion_id:
+                return jsonify({"error": "Ce numéro de châssis est déjà utilisé"}), 400
+
+        # Mettre à jour le camion par ID
+        update = supabase.table("camions").update(data).eq("id", camion_id).execute()
+        if hasattr(update, "error") and update.error:
+            return jsonify({"error": update.error.message}), 500
+        if not update.data:
+            return jsonify({"error": "Aucun camion modifié"}), 404
+
+        return jsonify({"message": "Camion mis à jour avec succès", "data": update.data}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # -----------------------------
 # Supprimer un camion
