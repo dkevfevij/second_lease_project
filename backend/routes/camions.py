@@ -97,37 +97,40 @@ def modifier_camion(numero_chassis):
         if not data:
             return jsonify({"error": "Aucune donnée reçue"}), 400
 
-        # Fetch the current camion to get its id
-        current_camion = supabase.table("camions").select("id").eq("numero_chassis", numero_chassis).execute()
-        if hasattr(current_camion, "error") and current_camion.error:
-            return jsonify({"error": current_camion.error.message}), 500
-        if not current_camion.data:
+        # Récupérer l'ID du camion à modifier
+        current = supabase.table("camions").select("id").eq("numero_chassis", numero_chassis).execute()
+        if hasattr(current, "error") and current.error:
+            return jsonify({"error": current.error.message}), 500
+        if not current.data:
             return jsonify({"error": "Aucun camion trouvé"}), 404
-        camion_id = current_camion.data[0]["id"]  # Assuming 'id' is the primary key
 
-        # Log the incoming data for debugging
-        print(f"Received data: {data}")
+        camion_id = current.data[0]["id"]
+        nouveau_chassis = data.get("numero_chassis", "").strip()
 
-        # Check for duplicate numero_chassis (excluding the current camion)
-        new_numero_chassis = data.get("numero_chassis")
-        if new_numero_chassis and new_numero_chassis != numero_chassis:
-            existing = supabase.table("camions").select("id").eq("numero_chassis", new_numero_chassis).execute()
-            if existing.data and len(existing.data) > 0 and existing.data[0]["id"] != camion_id:
-                return jsonify({"error": "Numéro de châssis déjà existant"}), 400
+        # Vérifier si le nouveau numéro est déjà utilisé (et différent)
+        if nouveau_chassis and nouveau_chassis != numero_chassis:
+            existing = supabase.table("camions").select("id").eq("numero_chassis", nouveau_chassis).execute()
+            if existing.data and existing.data[0]["id"] != camion_id:
+                return jsonify({"error": "Ce nouveau numéro de châssis existe déjà"}), 400
 
-        # Update using the id instead of numero_chassis
-        response = supabase.table("camions").update(data).eq("id", camion_id).execute()
-        if hasattr(response, "error") and response.error:
-            print(f"Update error: {response.error.message}")  # Log the specific error
-            return jsonify({"error": f"Échec de la modification: {response.error.message}"}), 500
-
-        if not response.data:
+        # Mettre à jour les champs du camion
+        update = supabase.table("camions").update(data).eq("id", camion_id).execute()
+        if hasattr(update, "error") and update.error:
+            return jsonify({"error": update.error.message}), 500
+        if not update.data:
             return jsonify({"error": "Aucun camion modifié"}), 404
 
-        return jsonify({"message": "Camion modifié", "data": response.data}), 200
+        # Mettre à jour les tables liées si le numéro de châssis a changé
+        if nouveau_chassis != numero_chassis:
+            supabase.table("prestations").update({"numero_chassis": nouveau_chassis}).eq("numero_chassis", numero_chassis).execute()
+            supabase.table("pieces").update({"numero_chassis": nouveau_chassis}).eq("numero_chassis", numero_chassis).execute()
+            supabase.table("reminders").update({"numero_chassis": nouveau_chassis}).eq("numero_chassis", numero_chassis).execute()
+
+        return jsonify({"message": "Camion modifié avec succès", "data": update.data}), 200
+
     except Exception as e:
-        print(f"Exception: {str(e)}")  # Log the exception
-        return jsonify({"error": f"Erreur inattendue: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500
+
 
 # -----------------------------
 # Supprimer un camion
